@@ -350,3 +350,87 @@ test("refuses a project from a newer format version", () => {
     ProjectValidationError,
   );
 });
+
+// ─── Floor plans (schema v3) ───────────────────────────────────────────────
+
+test("migrates a v2 project: floor plans gain level 0, scenes are not placed, minimap defaults", () => {
+  const project = validateOrMigrateProject(
+    baseProject({
+      schemaVersion: 2,
+      floorplans: [{ id: "fp1", name: "Ground", imageUrl: "asset:ground.png" }],
+      scenes: [{ id: "s1", name: "S", panoramaUrl: "https://example.com/a.jpg" }],
+    }),
+  );
+  assert.equal(project.schemaVersion, 3);
+  assert.equal(project.floorplans[0]?.level, 0);
+  assert.equal(project.scenes[0]?.floorplanPosition, null);
+  assert.equal(project.showFloorplan, true);
+  assert.equal(project.floorplanCorner, "bottom-left");
+  assert.deepEqual(project.floorplanOffset, { x: 20, y: 20, unit: "px" });
+});
+
+test("keeps floor plans, placements and minimap settings as saved", () => {
+  const placement = { floorplanId: "fp1", x: 0.25, y: 0.75, heading: 270 };
+  const project = validateOrMigrateProject(
+    baseProject({
+      showFloorplan: false,
+      floorplanCorner: "top-right",
+      floorplans: [{ id: "fp1", name: "Raised", imageUrl: "asset:r.png", level: 0.5 }],
+      scenes: [
+        {
+          id: "s1",
+          name: "S",
+          panoramaUrl: "https://example.com/a.jpg",
+          floorplanPosition: placement,
+        },
+      ],
+    }),
+  );
+  assert.equal(project.showFloorplan, false);
+  assert.equal(project.floorplanCorner, "top-right");
+  assert.equal(project.floorplans[0]?.level, 0.5);
+  assert.deepEqual(project.scenes[0]?.floorplanPosition, placement);
+});
+
+test("drops a placement on a floor plan that does not exist", () => {
+  const project = validateOrMigrateProject(
+    baseProject({
+      scenes: [
+        {
+          id: "s1",
+          name: "S",
+          panoramaUrl: "https://example.com/a.jpg",
+          floorplanPosition: { floorplanId: "gone", x: 0.5, y: 0.5, heading: 0 },
+        },
+      ],
+    }),
+  );
+  assert.equal(project.scenes[0]?.floorplanPosition, null);
+});
+
+test("rejects bad floor plans: unsafe image ref, duplicate id, position off the image, bad corner", () => {
+  const fp = { id: "fp1", name: "F", imageUrl: "asset:f.png", level: 0 };
+  assert.ok(rejects(baseProject({ floorplans: [{ ...fp, imageUrl: "asset:../x.png" }] })).length);
+  assert.ok(
+    rejects(baseProject({ floorplans: [fp, fp] })).some((i) =>
+      i.includes("duplicate floorplan id"),
+    ),
+  );
+  assert.ok(
+    rejects(
+      baseProject({
+        floorplans: [fp],
+        scenes: [
+          {
+            id: "s1",
+            name: "S",
+            panoramaUrl: "https://example.com/a.jpg",
+            floorplanPosition: { floorplanId: "fp1", x: 1.5, y: 0.5, heading: 0 },
+          },
+        ],
+      }),
+    ).length,
+  );
+  assert.ok(rejects(baseProject({ floorplanCorner: "top-center" })).length);
+  assert.ok(rejects(baseProject({ floorplanOffset: { x: 10, y: 10, unit: "em" } })).length);
+});

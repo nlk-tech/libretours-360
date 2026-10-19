@@ -5,7 +5,17 @@
  *
  * Pure string work: no DOM, no Tauri, so it can be tested in Node.
  */
-import type { Hotspot, Measurement, ThemeOverlayElement, TourProject } from "@/types/tour";
+import {
+  DEFAULT_FLOORPLAN_OFFSET,
+  type FloorplanCorner,
+  type FloorplanOffset,
+  type Hotspot,
+  type Measurement,
+  type ScenePlacement,
+  type ThemeOverlayElement,
+  type TourProject,
+} from "@/types/tour";
+import { exportedPlacement, type ExportedFloorplan, type MinimapAssets } from "../floorplan/export";
 import { FACE_NAMES } from "./core";
 
 export const FACE_EXTENSION = "jpg";
@@ -23,11 +33,13 @@ export interface CubemapTourScene {
   hotspots: Hotspot[];
   /** Measurement lines, drawn by the viewer as great-circle arcs. */
   measurements: Measurement[];
+  /** Place on a floor plan of `CubemapTour.floorplans`, or null. */
+  floorplanPosition: ScenePlacement | null;
 }
 
 export interface CubemapTour {
   format: "openstudio-cubemap-tour";
-  version: 1;
+  version: 2;
   name: string;
   initialSceneId: string | null;
   theme: {
@@ -43,6 +55,12 @@ export interface CubemapTour {
   };
   /** Whether measurement lines are visible when the tour opens (the viewer has a toggle). */
   showMeasurements: boolean;
+  /** Floors with an image in `floorplans/`, sorted by level. Empty: no minimap. */
+  floorplans: ExportedFloorplan[];
+  /** Whether the floor plan minimap is visible when the tour opens (the viewer has a toggle). */
+  showFloorplan: boolean;
+  floorplanCorner: FloorplanCorner;
+  floorplanOffset: FloorplanOffset;
   scenes: CubemapTourScene[];
 }
 
@@ -82,11 +100,13 @@ export function buildTour(
   logoDataUrl = "",
   /** theme.overlays, with every "logo"/"image" content already resolved to a data: URL. Defaults to the project's own (unresolved) overlays, e.g. for tests that don't care about image content. */
   overlays: ThemeOverlayElement[] = project.theme.overlays,
+  /** Floors whose images were written to the export (see writeFloorplanImages). */
+  floorplans: ExportedFloorplan[] = [],
 ): CubemapTour {
   const byId = new Map(layout.map((entry) => [entry.sceneId, entry]));
   return {
     format: "openstudio-cubemap-tour",
-    version: 1,
+    version: 2,
     name: project.name,
     initialSceneId: project.initialSceneId,
     theme: {
@@ -96,6 +116,10 @@ export function buildTour(
       overlays,
     },
     showMeasurements: project.showMeasurements !== false,
+    floorplans,
+    showFloorplan: project.showFloorplan !== false,
+    floorplanCorner: project.floorplanCorner ?? "bottom-left",
+    floorplanOffset: project.floorplanOffset ?? DEFAULT_FLOORPLAN_OFFSET,
     scenes: project.scenes.map((scene) => {
       const entry = byId.get(scene.id);
       if (!entry) throw new Error(`Scene "${scene.name}" is missing from the export layout`);
@@ -109,6 +133,7 @@ export function buildTour(
         defaultPitch: scene.defaultPitch,
         hotspots: scene.hotspots,
         measurements: scene.measurements ?? [],
+        floorplanPosition: exportedPlacement(scene, floorplans),
       };
     }),
   };
@@ -137,12 +162,15 @@ export function jsonForScript(value: unknown): string {
 export interface ViewerAssets {
   js: string;
   css: string;
+  /** The floor plan minimap (src/lib/floorplan/minimap.*); without it there is no minimap. */
+  minimap?: MinimapAssets;
 }
 
 export function buildIndexHtml(tour: CubemapTour, assets: ViewerAssets): string {
   const title = escapeHtml(tour.name);
   // The viewer source must not be able to close its own <script>.
-  const js = assets.js.replace(/<\/script/gi, "<\\/script");
+  const js = ((assets.minimap?.js ?? "") + "\n" + assets.js).replace(/<\/script/gi, "<\\/script");
+  const css = assets.css + "\n" + (assets.minimap?.css ?? "");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -150,7 +178,7 @@ export function buildIndexHtml(tour: CubemapTour, assets: ViewerAssets): string 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${title}</title>
 <style>
-${assets.css}
+${css}
 </style>
 </head>
 <body>
@@ -161,7 +189,7 @@ ${assets.css}
 <div id="navbar"><img id="logo" alt=""></div>
 <div id="title"></div>
 <div id="theme-overlays"></div>
-<div id="controls"><button id="measure-toggle" type="button" aria-pressed="false"></button><button id="fullscreen" type="button" aria-label="Fullscreen">&#x26F6;</button></div>
+<div id="controls"><button id="floorplan-toggle" type="button" aria-pressed="false"></button><button id="measure-toggle" type="button" aria-pressed="false"></button><button id="fullscreen" type="button" aria-label="Fullscreen">&#x26F6;</button></div>
 <div id="scene-list"></div>
 <div id="loader"></div>
 <div id="error" role="alert"></div>

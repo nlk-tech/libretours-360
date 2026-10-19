@@ -19,7 +19,11 @@ import { CubemapExportError, exportCubemapTour, type ExportDeps, type ExportSink
 
 const viewerJs = readFileSync(new URL("./viewer/viewer.js", import.meta.url), "utf8");
 const viewerCss = readFileSync(new URL("./viewer/viewer.css", import.meta.url), "utf8");
-const assets = { js: viewerJs, css: viewerCss };
+const minimap = {
+  js: readFileSync(new URL("../floorplan/minimap.js", import.meta.url), "utf8"),
+  css: readFileSync(new URL("../floorplan/minimap.css", import.meta.url), "utf8"),
+};
+const assets = { js: viewerJs, css: viewerCss, minimap };
 
 const hotspot = (over: Partial<Hotspot> = {}): Hotspot => ({
   id: "h1",
@@ -40,6 +44,7 @@ const scene = (id: string, name: string, over: Partial<Scene> = {}): Scene => ({
   defaultPitch: 0,
   hotspots: [],
   measurements: [],
+  floorplanPosition: null,
   ...over,
 });
 
@@ -54,6 +59,9 @@ const project = (scenes: Scene[], over: Partial<TourProject> = {}): TourProject 
   theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [] },
   floorplans: [],
   showMeasurements: true,
+  showFloorplan: true,
+  floorplanCorner: "bottom-left",
+  floorplanOffset: { x: 20, y: 20, unit: "px" },
   ...over,
 });
 
@@ -422,4 +430,57 @@ test("progress only moves forward and ends at 100%", async () => {
     assert.ok(seen[i]! >= seen[i - 1]!, `${seen[i]} < ${seen[i - 1]}`);
   assert.equal(seen[seen.length - 1], 1);
   assert.ok(seen.every((f) => f >= 0 && f <= 1));
+});
+
+// ─── Floor plans ───────────────────────────────────────────────────────────
+
+test("floor plan images are written to floorplans/ and the tour points at them", async () => {
+  const sink = new MemorySink();
+  const p = project([
+    scene("a", "Hall", { floorplanPosition: { floorplanId: "fp1", x: 0.2, y: 0.8, heading: 45 } }),
+    scene("b", "Attic", { floorplanPosition: { floorplanId: "fp2", x: 0.5, y: 0.5, heading: 0 } }),
+  ]);
+  p.floorplans = [
+    { id: "fp1", name: "Ground", imageUrl: "asset:g.png", level: 0 },
+    { id: "fp2", name: "Attic", imageUrl: "asset:missing.png", level: 3 },
+  ];
+  p.floorplanCorner = "top-left";
+  p.floorplanOffset = { x: 3, y: 4, unit: "%" };
+  await exportCubemapTour(
+    p,
+    sink,
+    fakeDeps({
+      getFloorplanImage: async (ref) =>
+        ref === "asset:g.png" ? new Blob(["png"], { type: "image/png" }) : null,
+    }),
+  );
+  assert.ok(sink.files.has("floorplans/ground-1.png"));
+  const tour = JSON.parse(sink.text("project.json")) as CubemapTour;
+  assert.equal(tour.version, 2);
+  assert.deepEqual(tour.floorplans, [
+    { id: "fp1", name: "Ground", level: 0, image: "./floorplans/ground-1.png" },
+  ]);
+  assert.equal(tour.floorplanCorner, "top-left");
+  assert.deepEqual(tour.floorplanOffset, { x: 3, y: 4, unit: "%" });
+  assert.equal(tour.showFloorplan, true);
+  assert.deepEqual(tour.scenes[0]!.floorplanPosition, {
+    floorplanId: "fp1",
+    x: 0.2,
+    y: 0.8,
+    heading: 45,
+  });
+  // The attic plan has no image: its scene is simply not on a plan.
+  assert.equal(tour.scenes[1]!.floorplanPosition, null);
+  const html = sink.text("index.html");
+  assert.match(html, /id="floorplan-toggle"/);
+  assert.match(html, /function createFloorplanMinimap\(/);
+  assert.match(html, /\.fpm-top-left/);
+});
+
+test("without a floor plan reader no floor plan is exported", async () => {
+  const sink = new MemorySink();
+  const p = project([scene("a", "Hall")]);
+  p.floorplans = [{ id: "fp1", name: "Ground", imageUrl: "asset:g.png", level: 0 }];
+  await exportCubemapTour(p, sink, fakeDeps());
+  assert.deepEqual((JSON.parse(sink.text("project.json")) as CubemapTour).floorplans, []);
 });

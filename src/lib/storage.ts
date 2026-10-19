@@ -230,13 +230,15 @@ export function cloneWithNewIds(project: TourProject): TourProject {
   const now = new Date().toISOString();
   const sceneIdMap = new Map<string, string>();
   project.scenes.forEach((s) => sceneIdMap.set(s.id, uid("scene")));
+  const floorplanIdMap = new Map<string, string>();
+  project.floorplans.forEach((f) => floorplanIdMap.set(f.id, uid("floorplan")));
   return {
     ...project,
     id: uid("tour"),
     createdAt: now,
     updatedAt: now,
     theme: { ...defaultTheme(), ...project.theme },
-    floorplans: project.floorplans ?? [],
+    floorplans: project.floorplans.map((f) => ({ ...f, id: floorplanIdMap.get(f.id)! })),
     initialSceneId: project.initialSceneId
       ? (sceneIdMap.get(project.initialSceneId) ?? null)
       : null,
@@ -248,6 +250,12 @@ export function cloneWithNewIds(project: TourProject): TourProject {
         id: uid("hs"),
         targetSceneId: h.targetSceneId ? (sceneIdMap.get(h.targetSceneId) ?? null) : null,
       })),
+      floorplanPosition: scene.floorplanPosition
+        ? {
+            ...scene.floorplanPosition,
+            floorplanId: floorplanIdMap.get(scene.floorplanPosition.floorplanId)!,
+          }
+        : null,
     })),
   };
 }

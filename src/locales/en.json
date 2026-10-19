@@ -114,9 +114,44 @@
         "logoUrlHint": "The image is stored inside the project: no external URL or network connection is needed in the exported viewer."
       },
       "floorplans": {
-        "title": "Interactive floorplans",
-        "hint": "Upload a plan and pin scenes onto it. Coming soon.",
-        "add": "Add floorplan"
+        "title": "Floor plans",
+        "hint": "Upload one plan per floor, then place each scene on it and set where it looks.",
+        "add": "Add floor plan",
+        "untitled": "Untitled floor",
+        "name": "Floor name",
+        "level": "Level",
+        "levelCustom": "Level {{level}}",
+        "levels": {
+          "basement2": "Second basement",
+          "basement": "Basement",
+          "lowerGround": "Lower ground floor",
+          "ground": "Ground floor",
+          "raised": "Raised ground floor",
+          "first": "First floor",
+          "second": "Second floor",
+          "third": "Third floor",
+          "fourth": "Fourth floor"
+        },
+        "replace": "Replace image",
+        "delete": "Delete floor plan",
+        "deleteTitle": "Delete \"{{name}}\"?",
+        "deleteConfirm_one": "{{count}} scene is placed on this floor plan: it will no longer be on any plan.",
+        "deleteConfirm_other": "{{count}} scenes are placed on this floor plan: they will no longer be on any plan.",
+        "activeScene": "Current scene",
+        "sceneFloor": "Floor of the current scene",
+        "notPlaced": "No floor plan",
+        "removeFromFloorplan": "Remove from floor plan",
+        "placeHelp": "Drag the scene's dot on the minimap to move it, and the white handle to turn its view direction. Enlarge the minimap for Place here and Point at a landmark.",
+        "noActiveScene": "Select a scene to place it on a floor plan.",
+        "showInExport": "Show the floor plan in the exported tour",
+        "corner": "Floor plan position",
+        "corners": {
+          "top-left": "Top left",
+          "top-right": "Top right",
+          "bottom-left": "Bottom left",
+          "bottom-right": "Bottom right"
+        },
+        "offsetHelp": "Distance from the edges of the chosen corner, as for theme elements. The minimap never covers the viewer's own buttons."
       }
     },
     "theme": {
@@ -240,7 +275,22 @@
       "measureSecondPoint": "Click the second point · Esc to cancel",
       "showMeasurements": "Show measurements",
       "hideMeasurements": "Hide measurements",
-      "measurements": "Measurements"
+      "measurements": "Measurements",
+      "floorplan": {
+        "toggle": "Floor plan",
+        "show": "Show floor plan",
+        "hide": "Hide floor plan",
+        "floor": "Floor",
+        "expand": "Enlarge",
+        "collapse": "Reduce",
+        "noImage": "Image not available",
+        "placeHere": "Place here",
+        "pointAtLandmark": "Point at a landmark",
+        "dragArc": "Drag to turn the view direction",
+        "placeHint": "Click the point of the plan where the scene was taken · Esc to cancel",
+        "landmarkHint": "Turn the panorama so a landmark (a door, a window) is in the centre, then click that landmark on the plan · Esc to cancel",
+        "notPlacedHint": "This scene is not on this floor plan yet: use Place here."
+      }
     },
     "defaults": {
       "newHotspotTooltip": "New hotspot",
@@ -274,7 +324,9 @@
       "returnHotspotCreated": "Return hotspot created",
       "defaultViewSaved": "Default view saved",
       "export3dDone": "3D export completed",
-      "web3dExportLocation": "Upload the contents of {{location}} to your web server"
+      "web3dExportLocation": "Upload the contents of {{location}} to your web server",
+      "floorplanUploadFailed": "Could not upload the floor plan image",
+      "floorplanOnlyImages": "Floor plans must be PNG, JPG, WebP or SVG images."
     }
   },
   "dialogs": {

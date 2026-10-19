@@ -1,0 +1,122 @@
+/* Floor plan minimap of the exported tours, see minimap.js. */
+.fpm {
+  position: absolute;
+  z-index: 12;
+  width: 220px;
+  overflow: hidden;
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: #e2e8f0;
+  font:
+    12px/1.3 system-ui,
+    sans-serif;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+/* --fpm-x/--fpm-y: the project's offset. --fpm-clear-*: never closer to the edge
+   than this, to stay clear of the viewer's own controls. Set by minimap.js. */
+.fpm {
+  --fpm-clear-bottom: 20px;
+}
+.fpm-top-left {
+  top: max(var(--fpm-y, 20px), var(--fpm-clear-top, 20px));
+  left: var(--fpm-x, 20px);
+}
+.fpm-top-right {
+  top: max(var(--fpm-y, 20px), var(--fpm-clear-top, 20px));
+  right: var(--fpm-x, 20px);
+}
+.fpm-bottom-left {
+  bottom: max(var(--fpm-y, 20px), var(--fpm-clear-bottom));
+  left: var(--fpm-x, 20px);
+}
+.fpm-bottom-right {
+  bottom: max(var(--fpm-y, 20px), var(--fpm-clear-bottom));
+  right: var(--fpm-x, 20px);
+}
+.fpm.fpm-expanded {
+  width: min(560px, calc(100vw - 40px));
+}
+.fpm-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(71, 85, 105, 0.6);
+}
+.fpm-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fpm-select {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+.fpm-select option {
+  background: #0f172a;
+}
+.fpm-expand {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.fpm-expand:hover {
+  color: #fff;
+}
+.fpm-box {
+  position: relative;
+  line-height: 0;
+}
+.fpm-box img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.fpm-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.fpm-pin {
+  fill: #0f172a;
+  stroke: #e2e8f0;
+  cursor: pointer;
+}
+.fpm-pin:hover {
+  fill: #22d3ee;
+}
+.fpm-active {
+  fill: #22d3ee;
+  stroke: #0f172a;
+  pointer-events: none;
+}
+.fpm-cone {
+  fill: rgba(34, 211, 238, 0.35);
+  stroke: rgba(34, 211, 238, 0.9);
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .fpm {
+    width: 150px;
+  }
+  /* Above the scene list, which wraps over the bottom of narrow screens. */
+  .fpm {
+    --fpm-clear-bottom: 96px;
+  }
+}

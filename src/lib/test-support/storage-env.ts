@@ -148,6 +148,9 @@ export function makeProject(id: string, overrides: Partial<TourProject> = {}): T
     theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [] },
     floorplans: [],
     showMeasurements: true,
+    showFloorplan: true,
+    floorplanCorner: "bottom-left",
+    floorplanOffset: { x: 20, y: 20, unit: "px" },
     ...overrides,
   };
 }

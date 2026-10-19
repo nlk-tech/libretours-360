@@ -114,9 +114,44 @@
         "logoUrlHint": "L'immagine viene salvata nel progetto: nessun URL esterno o connessione di rete è richiesta nel viewer esportato."
       },
       "floorplans": {
-        "title": "Piante interattive",
-        "hint": "Carica una piantina e posiziona le scene su di essa. Presto disponibile.",
-        "add": "Aggiungi piantina"
+        "title": "Planimetrie",
+        "hint": "Carica una planimetria per ogni piano, poi posiziona ogni scena e indica dove guarda.",
+        "add": "Aggiungi planimetria",
+        "untitled": "Piano senza nome",
+        "name": "Nome del piano",
+        "level": "Livello",
+        "levelCustom": "Livello {{level}}",
+        "levels": {
+          "basement2": "Secondo interrato",
+          "basement": "Interrato",
+          "lowerGround": "Seminterrato",
+          "ground": "Piano terra",
+          "raised": "Piano rialzato",
+          "first": "Primo piano",
+          "second": "Secondo piano",
+          "third": "Terzo piano",
+          "fourth": "Quarto piano"
+        },
+        "replace": "Sostituisci immagine",
+        "delete": "Elimina planimetria",
+        "deleteTitle": "Eliminare \"{{name}}\"?",
+        "deleteConfirm_one": "{{count}} scena è posizionata su questa planimetria: non sarà più su nessuna planimetria.",
+        "deleteConfirm_other": "{{count}} scene sono posizionate su questa planimetria: non saranno più su nessuna planimetria.",
+        "activeScene": "Scena corrente",
+        "sceneFloor": "Piano della scena corrente",
+        "notPlaced": "Nessuna planimetria",
+        "removeFromFloorplan": "Rimuovi dalla planimetria",
+        "placeHelp": "Trascina il pallino della scena sulla minimappa per spostarlo, e la maniglia bianca per ruotare la direzione di vista. Ingrandisci la minimappa per Posiziona qui e Punta un riferimento.",
+        "noActiveScene": "Seleziona una scena per posizionarla su una planimetria.",
+        "showInExport": "Mostra la planimetria nel tour esportato",
+        "corner": "Posizione della planimetria",
+        "corners": {
+          "top-left": "In alto a sinistra",
+          "top-right": "In alto a destra",
+          "bottom-left": "In basso a sinistra",
+          "bottom-right": "In basso a destra"
+        },
+        "offsetHelp": "Distanza dai bordi dell'angolo scelto, come per gli elementi del tema. La minimappa non copre mai i pulsanti del viewer."
       }
     },
     "theme": {
@@ -240,7 +275,22 @@
       "measureSecondPoint": "Clicca il secondo punto · Esc per annullare",
       "showMeasurements": "Mostra misure",
       "hideMeasurements": "Nascondi misure",
-      "measurements": "Misure"
+      "measurements": "Misure",
+      "floorplan": {
+        "toggle": "Planimetria",
+        "show": "Mostra planimetria",
+        "hide": "Nascondi planimetria",
+        "floor": "Piano",
+        "expand": "Ingrandisci",
+        "collapse": "Riduci",
+        "noImage": "Immagine non disponibile",
+        "placeHere": "Posiziona qui",
+        "pointAtLandmark": "Punta un riferimento",
+        "dragArc": "Trascina per ruotare la direzione di vista",
+        "placeHint": "Clicca il punto della planimetria in cui è stata scattata la scena · Esc per annullare",
+        "landmarkHint": "Ruota il panorama in modo da avere un riferimento (una porta, una finestra) al centro, poi clicca lo stesso riferimento sulla planimetria · Esc per annullare",
+        "notPlacedHint": "Questa scena non è ancora su questa planimetria: usa Posiziona qui."
+      }
     },
     "defaults": {
       "newHotspotTooltip": "Nuovo hotspot",
@@ -274,7 +324,9 @@
       "returnHotspotCreated": "Hotspot di ritorno creato",
       "defaultViewSaved": "Vista predefinita salvata",
       "export3dDone": "Esportazione 3D completata",
-      "web3dExportLocation": "Carica il contenuto di {{location}} sul tuo server web"
+      "web3dExportLocation": "Carica il contenuto di {{location}} sul tuo server web",
+      "floorplanUploadFailed": "Impossibile caricare l'immagine della planimetria",
+      "floorplanOnlyImages": "Le planimetrie devono essere immagini PNG, JPG, WebP o SVG."
     }
   },
   "dialogs": {

@@ -28,6 +28,12 @@
       measurements: "Measurements",
       showMeasurements: "Show measurements",
       hideMeasurements: "Hide measurements",
+      floorplan: "Floor plan",
+      showFloorplan: "Show floor plan",
+      hideFloorplan: "Hide floor plan",
+      floor: "Floor",
+      expand: "Enlarge",
+      collapse: "Reduce",
     },
     it: {
       fullscreen: "Schermo intero",
@@ -40,6 +46,12 @@
       measurements: "Misure",
       showMeasurements: "Mostra misure",
       hideMeasurements: "Nascondi misure",
+      floorplan: "Planimetria",
+      showFloorplan: "Mostra planimetria",
+      hideFloorplan: "Nascondi planimetria",
+      floor: "Piano",
+      expand: "Ingrandisci",
+      collapse: "Riduci",
     },
   };
   var LANG =
@@ -126,6 +138,7 @@
   var measureLinesEl = document.getElementById("measure-lines");
   var measureLabelsEl = document.getElementById("measure-labels");
   var measureToggleEl = document.getElementById("measure-toggle");
+  var floorplanToggleEl = document.getElementById("floorplan-toggle");
   var titleEl = document.getElementById("title");
   var navbarEl = document.getElementById("navbar");
   var logoEl = document.getElementById("logo");
@@ -583,6 +596,12 @@
       }
     }
     renderMeasurements(p);
+    if (minimap) {
+      // view.fov is vertical; the cone on the plan shows the horizontal one.
+      var aspect = (stage.clientWidth || 1) / (stage.clientHeight || 1);
+      var hFov = (2 * Math.atan(Math.tan((view.fov * DEG) / 2) * aspect)) / DEG;
+      minimap.setView(view.yaw, hFov);
+    }
   }
 
   function requestRender() {
@@ -836,6 +855,57 @@
     requestRender();
   });
 
+  // ─── Floor plan minimap (src/lib/floorplan/minimap.js, inlined before this script) ─
+
+  var minimap = null;
+
+  function updateFloorplanToggle() {
+    // Only scenes on a plan have a minimap to show or hide.
+    floorplanToggleEl.style.display = minimap && minimap.isAvailable() ? "" : "none";
+    if (!minimap) return;
+    var on = minimap.isVisible();
+    floorplanToggleEl.classList.toggle("on", on);
+    floorplanToggleEl.setAttribute("aria-pressed", on ? "true" : "false");
+    floorplanToggleEl.title = tt(on ? "hideFloorplan" : "showFloorplan");
+    floorplanToggleEl.innerHTML =
+      (on ? EYE_ICON : EYE_OFF_ICON) + "<span>" + tt("floorplan") + "</span>";
+  }
+
+  // Top left: below the theme's logo bar and title. Top right: below the buttons.
+  function minimapClearTop(corner) {
+    if (corner === "top-right") return 70;
+    var navbar = navbarEl.classList.contains("visible");
+    var title = titleEl.classList.contains("visible");
+    return title ? (navbar ? 130 : 76) : navbar ? 72 : 20;
+  }
+
+  function setupMinimap() {
+    var floorplans = TOUR.floorplans || [];
+    if (typeof createFloorplanMinimap === "function" && floorplans.length) {
+      var corner = TOUR.floorplanCorner || "bottom-left";
+      minimap = createFloorplanMinimap(document.body, {
+        floorplans: floorplans,
+        scenes: SCENES,
+        corner: corner,
+        offset: TOUR.floorplanOffset,
+        clearTop: minimapClearTop(corner),
+        visible: TOUR.showFloorplan !== false,
+        labels: { floor: tt("floor"), expand: tt("expand"), collapse: tt("collapse") },
+        onNavigate: function (id) {
+          loadScene(id);
+        },
+      });
+    }
+    updateFloorplanToggle();
+  }
+
+  floorplanToggleEl.addEventListener("click", function () {
+    if (!minimap) return;
+    minimap.setVisible(!minimap.isVisible());
+    updateFloorplanToggle();
+    requestRender();
+  });
+
   // ─── Scenes ──────────────────────────────────────────────────────────────
 
   function buildSceneList() {
@@ -902,6 +972,10 @@
         renderThemeOverlays(scene.name);
         buildHotspots(scene);
         buildMeasurements(scene);
+        if (minimap) {
+          minimap.setScene(scene.id);
+          updateFloorplanToggle();
+        }
         markActiveScene(scene.id);
         loaderEl.classList.remove("open");
         // Draw right away: the scene must not be shown (or reported ready) before it is placed.
@@ -936,7 +1010,7 @@
   }
 
   document.addEventListener("pointerdown", function (e) {
-    if (e.target.closest(".hs, #scene-list, #modal, #controls")) return;
+    if (e.target.closest(".hs, #scene-list, #modal, #controls, .fpm")) return;
     if (e.button !== undefined && e.button > 0) return;
     pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
     stage.classList.add("dragging");
@@ -1071,6 +1145,7 @@
     titleEl.classList.add("with-navbar");
   }
   buildSceneList();
+  setupMinimap();
   requestAnimationFrame(frame);
   loadScene(startScene.id, startView);
 })();

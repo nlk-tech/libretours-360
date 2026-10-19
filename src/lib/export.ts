@@ -1,8 +1,14 @@
-import type { Theme, TourProject } from "@/types/tour";
+import { DEFAULT_FLOORPLAN_OFFSET, type Theme, type TourProject } from "@/types/tour";
 import { getBlob, isLocalAssetRef } from "./assets";
 import { openExportSink, type ExportResult, type ExportSink } from "./export-sink";
 import { saveFile } from "./save-file";
-import { resolveOverlaysForExport, resolveThemeImageDataUrl } from "./theme-assets";
+import { getThemeAsset, resolveOverlaysForExport, resolveThemeImageDataUrl } from "./theme-assets";
+import {
+  exportedPlacement,
+  writeFloorplanImages,
+  type ExportedFloorplan,
+  type MinimapAssets,
+} from "./floorplan/export";
 
 const slug = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "tour";
@@ -43,22 +49,40 @@ async function resolveThemeForExport(project: TourProject): Promise<Theme> {
   return { ...theme, logoUrl, overlays };
 }
 
-export function viewerHtml3D(project: TourProject) {
+export interface Web3DExtras {
+  /** Floors written next to index.html (see writeFloorplanImages). */
+  floorplans?: ExportedFloorplan[];
+  /** src/lib/floorplan/minimap.{js,css}; without it the tour has no minimap. */
+  minimap?: MinimapAssets;
+}
+
+export function viewerHtml3D(project: TourProject, extras: Web3DExtras = {}) {
+  const floorplans = extras.floorplans ?? [];
+  // Inlined in the module script; it must not be able to close it.
+  const minimapJs = (extras.minimap?.js ?? "").replace(/<\/script/gi, "<\\/script");
+  const minimapCss = extras.minimap?.css ?? "";
   // scriptJson, not JSON.stringify: hotspot tooltips and measurement labels are
   // free text and must not be able to close the inline <script>.
-  const scenesJson = scriptJson(project.scenes.map((s) => ({
-    id: s.id,
-    name: s.name,
-    panoramaUrl: s.panoramaUrl,
-    defaultZoom: s.defaultZoom,
-    hotspots: s.hotspots,
-    measurements: s.measurements ?? [],
-  })));
+  const scenesJson = scriptJson(
+    project.scenes.map((s) => ({
+      id: s.id,
+      name: s.name,
+      panoramaUrl: s.panoramaUrl,
+      defaultZoom: s.defaultZoom,
+      hotspots: s.hotspots,
+      measurements: s.measurements ?? [],
+      floorplanPosition: exportedPlacement(s, floorplans),
+    })),
+  );
 
   const initialSceneId = project.initialSceneId || project.scenes[0]?.id || "";
   const themeJson = scriptJson(project.theme);
   const projectNameJson = scriptJson(project.name);
   const showMeasurementsJson = scriptJson(project.showMeasurements !== false);
+  const floorplansJson = scriptJson(floorplans);
+  const showFloorplanJson = scriptJson(project.showFloorplan !== false);
+  const floorplanCornerJson = scriptJson(project.floorplanCorner ?? "bottom-left");
+  const floorplanOffsetJson = scriptJson(project.floorplanOffset ?? DEFAULT_FLOORPLAN_OFFSET);
 
   return `<!doctype html>
 <html lang="it">
@@ -109,12 +133,14 @@ export function viewerHtml3D(project: TourProject) {
     #info-modal-body code{background:#27272a;padding:1px 4px;border-radius:4px;font-size:13px}
     #info-modal-body pre{background:#27272a;padding:12px;border-radius:8px;overflow-x:auto;font-size:13px}
     #info-modal-body blockquote{border-left:3px solid #52525b;padding-left:12px;margin:8px 0;color:#a1a1aa}
-    #measure-toggle{display:none;position:absolute;top:20px;right:20px;z-index:10;height:38px;padding:0 12px;gap:6px;
+    #tour-controls{position:absolute;top:20px;right:20px;z-index:10;display:flex;gap:8px}
+    #measure-toggle,#floorplan-toggle{display:none;height:38px;padding:0 12px;gap:6px;
       align-items:center;border-radius:10px;border:1px solid #3f3f46;background:rgba(24,24,27,.8);color:#a1a1aa;
       font:600 13px/1 system-ui,sans-serif;cursor:pointer;backdrop-filter:blur(4px)}
-    #measure-toggle:hover{background:#27272a}
-    #measure-toggle.available{display:flex}
-    #measure-toggle.on{color:#67e8f9;border-color:rgba(103,232,249,.5)}
+    #measure-toggle:hover,#floorplan-toggle:hover{background:#27272a}
+    #measure-toggle.available,#floorplan-toggle.available{display:flex}
+    #measure-toggle.on,#floorplan-toggle.on{color:#67e8f9;border-color:rgba(103,232,249,.5)}
+${minimapCss}
   </style>
 </head>
 <body>
@@ -123,7 +149,10 @@ export function viewerHtml3D(project: TourProject) {
   <div id="title"></div>
   <div id="theme-overlays"></div>
   <div id="scene-list"></div>
-  <button id="measure-toggle" type="button" aria-pressed="false"></button>
+  <div id="tour-controls">
+    <button id="floorplan-toggle" type="button" aria-pressed="false"></button>
+    <button id="measure-toggle" type="button" aria-pressed="false"></button>
+  </div>
   <div id="info-modal-overlay">
     <div id="info-modal">
       <div id="info-modal-header">
@@ -185,6 +214,12 @@ export function viewerHtml3D(project: TourProject) {
     let viewer = null;
     let markersPlugin = null;
     let measurementsVisible = ${showMeasurementsJson};
+    const FLOORPLANS = ${floorplansJson};
+    const SHOW_FLOORPLAN = ${showFloorplanJson};
+    const FLOORPLAN_CORNER = ${floorplanCornerJson};
+    const FLOORPLAN_OFFSET = ${floorplanOffsetJson};
+
+${minimapJs}
 
     // ─── Measurements (same math as src/lib/measure-geometry.ts) ──────────
 
@@ -302,6 +337,65 @@ export function viewerHtml3D(project: TourProject) {
       updateMeasureToggle(scene);
       if (scene) renderMeasurements(scene);
     });
+
+    // ─── Floor plan minimap (src/lib/floorplan/minimap.js) ────────────────
+
+    var FLOORPLAN_TEXT = IS_IT
+      ? { label: "Planimetria", show: "Mostra planimetria", hide: "Nascondi planimetria",
+          floor: "Piano", expand: "Ingrandisci", collapse: "Riduci" }
+      : { label: "Floor plan", show: "Show floor plan", hide: "Hide floor plan",
+          floor: "Floor", expand: "Enlarge", collapse: "Reduce" };
+    var minimap = null;
+
+    function updateFloorplanToggle() {
+      var btn = document.getElementById("floorplan-toggle");
+      if (!minimap) return;
+      var on = minimap.isVisible();
+      // Only scenes on a plan have a minimap to show or hide.
+      if (minimap.isAvailable()) btn.classList.add("available");
+      else btn.classList.remove("available");
+      if (on) btn.classList.add("on");
+      else btn.classList.remove("on");
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+      btn.title = on ? FLOORPLAN_TEXT.hide : FLOORPLAN_TEXT.show;
+      btn.innerHTML = (on ? EYE_ICON : EYE_OFF_ICON) + "<span>" + FLOORPLAN_TEXT.label + "</span>";
+    }
+
+    document.getElementById("floorplan-toggle").addEventListener("click", function() {
+      if (!minimap) return;
+      minimap.setVisible(!minimap.isVisible());
+      updateFloorplanToggle();
+    });
+
+    // Top left: below the theme's logo bar and title. Top right: below the buttons.
+    function minimapClearTop() {
+      if (FLOORPLAN_CORNER === "top-right") return 70;
+      var navbar = THEME.showNavbar !== false && !!THEME.logoUrl;
+      var title = THEME.showTitleOverlay !== false;
+      return title ? (navbar ? 130 : 76) : navbar ? 72 : 20;
+    }
+
+    function setupMinimap() {
+      if (typeof createFloorplanMinimap !== "function" || !FLOORPLANS.length) return;
+      minimap = createFloorplanMinimap(document.body, {
+        floorplans: FLOORPLANS,
+        scenes: SCENES,
+        corner: FLOORPLAN_CORNER,
+        offset: FLOORPLAN_OFFSET,
+        clearTop: minimapClearTop(),
+        visible: SHOW_FLOORPLAN,
+        labels: FLOORPLAN_TEXT,
+        onNavigate: function(id) { loadScene(id); }
+      });
+      if (!minimap) return;
+      updateFloorplanToggle();
+    }
+
+    function syncMinimapView() {
+      if (!minimap || !viewer) return;
+      var pos = viewer.getPosition();
+      minimap.setView(pos.yaw * 180 / Math.PI, (viewer.state && viewer.state.hFov) || 90);
+    }
 
     // ─── Theme (mirrors the standalone viewer, lib/cubemap/viewer/viewer.js) ──
 
@@ -443,7 +537,9 @@ export function viewerHtml3D(project: TourProject) {
           }
         });
 
-        viewer.addEventListener("ready", function() { updateMarkers(scene); }, { once: true });
+        viewer.addEventListener("ready", function() { updateMarkers(scene); syncMinimapView(); }, { once: true });
+        viewer.addEventListener("position-updated", syncMinimapView);
+        viewer.addEventListener("zoom-updated", syncMinimapView);
       } else {
         await viewer.setPanorama(scene.panoramaUrl);
         updateMarkers(scene);
@@ -452,6 +548,11 @@ export function viewerHtml3D(project: TourProject) {
       document.getElementById("title").textContent = scene.name;
       renderThemeOverlays(scene.name);
       updateMeasureToggle(scene);
+      if (minimap) {
+        minimap.setScene(sceneId);
+        updateFloorplanToggle();
+        syncMinimapView();
+      }
 
       const listEl = document.getElementById("scene-list");
       listEl.innerHTML = "";
@@ -465,6 +566,7 @@ export function viewerHtml3D(project: TourProject) {
     }
 
     applyTheme();
+    setupMinimap();
     loadScene(currentSceneId);
   </script>
 </body>
@@ -499,8 +601,12 @@ async function resolvePanoramaForExport(
   return "";
 }
 
-/** Writes the Web 3D tour (index.html + panoramas/) into `sink`. */
-export async function writeWeb3DTour(project: TourProject, sink: ExportSink): Promise<void> {
+/** Writes the Web 3D tour (index.html + panoramas/ + floorplans/) into `sink`. */
+export async function writeWeb3DTour(
+  project: TourProject,
+  sink: ExportSink,
+  minimap?: MinimapAssets,
+): Promise<void> {
   const exported: TourProject = {
     ...project,
     scenes: [],
@@ -516,7 +622,13 @@ export async function writeWeb3DTour(project: TourProject, sink: ExportSink): Pr
     );
     exported.scenes.push({ ...scene, panoramaUrl: url });
   }
-  await sink.writeFile("index.html", viewerHtml3D(exported));
+  const floorplans = await writeFloorplanImages(project.floorplans, sink, (ref) =>
+    getThemeAsset(project.id, ref),
+  );
+  await sink.writeFile(
+    "index.html",
+    viewerHtml3D(exported, { floorplans, ...(minimap && { minimap }) }),
+  );
 }
 
 /**
@@ -526,7 +638,8 @@ export async function writeWeb3DTour(project: TourProject, sink: ExportSink): Pr
 export async function exportWeb3D(project: TourProject): Promise<ExportResult> {
   const sink = await openExportSink(`${slug(project.name)}-tour-3d`);
   if (!sink) return { status: "cancelled" };
-  await writeWeb3DTour(project, sink);
+  const { minimapAssets } = await import("./floorplan/assets");
+  await writeWeb3DTour(project, sink, minimapAssets);
   await sink.finish();
   return {
     status: "done",

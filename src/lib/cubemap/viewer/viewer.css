@@ -199,7 +199,8 @@ body {
   display: flex;
   gap: 8px;
 }
-#measure-toggle {
+#measure-toggle,
+#floorplan-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -214,11 +215,13 @@ body {
     sans-serif;
   cursor: pointer;
 }
-#measure-toggle.on {
+#measure-toggle.on,
+#floorplan-toggle.on {
   color: #67e8f9;
   border-color: rgba(103, 232, 249, 0.5);
 }
-#measure-toggle:hover {
+#measure-toggle:hover,
+#floorplan-toggle:hover {
   background: #27272a;
 }
 #fullscreen {

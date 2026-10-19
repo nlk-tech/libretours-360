@@ -111,6 +111,9 @@ const project: TourProject = {
   theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [] },
   floorplans: [],
   showMeasurements: true,
+  showFloorplan: true,
+  floorplanCorner: "bottom-left",
+  floorplanOffset: { x: 20, y: 20, unit: "px" },
   scenes: [
     {
       id: "a",
@@ -120,6 +123,7 @@ const project: TourProject = {
       defaultYaw: 0,
       defaultPitch: 0,
       measurements: [],
+      floorplanPosition: null,
       hotspots: [
         hs({ id: "nav", yaw: 45, pitch: 10, targetSceneId: "b", tooltip: "To the kitchen" }),
         hs({ id: "nav-low", type: "door", yaw: 45, pitch: -10, targetSceneId: "b" }),
@@ -142,6 +146,7 @@ const project: TourProject = {
       defaultYaw: 0,
       defaultPitch: 0,
       measurements: [],
+      floorplanPosition: null,
       hotspots: [hs({ id: "back", yaw: -30, pitch: 0, targetSceneId: "a" })],
     },
   ],
@@ -161,6 +166,9 @@ const defaultsProject: TourProject = {
   theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [] },
   floorplans: [],
   showMeasurements: true,
+  showFloorplan: true,
+  floorplanCorner: "bottom-left",
+  floorplanOffset: { x: 20, y: 20, unit: "px" },
   scenes: [
     {
       id: "a",
@@ -170,6 +178,7 @@ const defaultsProject: TourProject = {
       defaultYaw: 30,
       defaultPitch: -15,
       measurements: [],
+      floorplanPosition: null,
       hotspots: [hs({ id: "nav", yaw: 45, pitch: 10, targetSceneId: "b" })],
     },
     {
@@ -180,6 +189,7 @@ const defaultsProject: TourProject = {
       defaultYaw: -60,
       defaultPitch: 20,
       measurements: [],
+      floorplanPosition: null,
       hotspots: [hs({ id: "back", yaw: -30, pitch: 0, targetSceneId: "a" })],
     },
   ],
@@ -898,4 +908,186 @@ test("the real converter refuses non-2:1 images and honours cancellation", { ski
   assert.match(outcome.ratio, /must be 2:1/);
   assert.match(outcome.aborted, /^AbortError/);
   assert.match(outcome.garbage, /could not be decoded/);
+});
+
+// ─── Floor plan minimap ─────────────────────────────────────────────────────
+
+// Hall and Kitchen side by side on a 400x200 plan; the hall looks right (heading 90).
+const floorplanProject: TourProject = {
+  ...project,
+  id: "tour_floorplan",
+  floorplans: [
+    { id: "fp_ground", name: "Ground", imageUrl: "asset:ground.png", level: 0 },
+    { id: "fp_first", name: "First", imageUrl: "asset:first.png", level: 1 },
+  ],
+  floorplanCorner: "bottom-left",
+  floorplanOffset: { x: 40, y: 30, unit: "px" },
+  scenes: [
+    {
+      ...project.scenes[0]!,
+      floorplanPosition: { floorplanId: "fp_ground", x: 0.25, y: 0.5, heading: 90 },
+    },
+    {
+      ...project.scenes[1]!,
+      floorplanPosition: { floorplanId: "fp_ground", x: 0.75, y: 0.5, heading: 0 },
+    },
+  ],
+};
+
+const planPng = (w: number, h: number) =>
+  new Blob([new Uint8Array(encodePng(w, h, new Uint8Array(w * h * 4).fill(235)))], {
+    type: "image/png",
+  });
+
+test(
+  "the floor plan minimap shows the floors, follows the view and navigates; its toggle hides it",
+  { skip },
+  async () => {
+    const planDir = mkdtempSync(join(tmpdir(), "cubemap-floorplan-"));
+    try {
+      await exportCubemapTour(floorplanProject, folderSink(planDir), {
+        ...deps,
+        getFloorplanImage: async (ref) =>
+          ref === "asset:ground.png" ? planPng(400, 200) : planPng(200, 200),
+        assets: {
+          ...deps.assets,
+          minimap: {
+            js: readFileSync(new URL("../floorplan/minimap.js", import.meta.url), "utf8"),
+            css: readFileSync(new URL("../floorplan/minimap.css", import.meta.url), "utf8"),
+          },
+        },
+      });
+      await open("#yaw=0&pitch=0&fov=90", planDir);
+      await page.waitFor(
+        `document.querySelector("[data-testid=floorplan-minimap] img")?.naturalWidth === 400`,
+      );
+
+      const box = await page.eval<{
+        left: number;
+        bottom: number;
+        width: number;
+        height: number;
+      }>(`(() => {
+        const r = document.querySelector("[data-testid=floorplan-minimap]").getBoundingClientRect();
+        return { left: r.left, bottom: innerHeight - r.bottom, width: r.width, height: r.height };
+      })()`);
+      assert.equal(box.left, 40, "offset x from the left edge");
+      assert.equal(box.bottom, 30, "offset y from the bottom edge");
+      assert.deepEqual(
+        await page.eval(
+          `[...document.querySelectorAll(".fpm-select option")].map(o => o.textContent)`,
+        ),
+        ["Ground", "First"],
+      );
+      await snapshot("floorplan-minimap");
+
+      // Cone direction: at yaw 0 it points at the heading (90 = right of the pin).
+      const coneDir = () =>
+        page.eval<number>(`(() => {
+          const pin = document.querySelector(".fpm-active").getBoundingClientRect();
+          const cone = document.querySelector(".fpm-cone").getBoundingClientRect();
+          const dx = (cone.left + cone.width / 2) - (pin.left + pin.width / 2);
+          const dy = (cone.top + cone.height / 2) - (pin.top + pin.height / 2);
+          return (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+        })()`);
+      assert.ok(
+        Math.abs((await coneDir()) - 90) < 10,
+        `cone at ${await coneDir()}°, expected ~90°`,
+      );
+      // Opened looking 90° to the right: the cone turns with the view.
+      await open("#yaw=90&pitch=0&fov=90", planDir);
+      await page.waitFor(`!!document.querySelector(".fpm-cone")`);
+      assert.ok(
+        Math.abs((await coneDir()) - 180) < 10,
+        `cone at ${await coneDir()}°, expected ~180°`,
+      );
+
+      // Clicking the kitchen pin opens the kitchen.
+      const pin = await page.eval<{ x: number; y: number }>(`(() => {
+        const r = document.querySelector('.fpm-pin[data-scene-id="b"]').getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      })()`);
+      await page.mouse("mousePressed", pin.x, pin.y);
+      await page.mouse("mouseReleased", pin.x, pin.y);
+      await page.waitFor(`document.documentElement.dataset.scene === "b"`);
+      assert.equal(
+        await page.eval(`!!document.querySelector('.fpm-pin[data-scene-id="a"]')`),
+        true,
+      );
+
+      // The toggle hides and shows it again.
+      const toggle = `document.getElementById("floorplan-toggle")`;
+      assert.equal(await page.eval(`getComputedStyle(${toggle}).display`), "flex");
+      await page.eval(`${toggle}.click()`);
+      assert.equal(
+        await page.eval(
+          `getComputedStyle(document.querySelector("[data-testid=floorplan-minimap]")).display`,
+        ),
+        "none",
+      );
+      assert.equal(await page.eval(`${toggle}.getAttribute("aria-pressed")`), "false");
+      await page.eval(`${toggle}.click()`);
+      assert.equal(
+        await page.eval(
+          `getComputedStyle(document.querySelector("[data-testid=floorplan-minimap]")).display`,
+        ),
+        "block",
+      );
+      assert.deepEqual(page.problems, []);
+    } finally {
+      rmSync(planDir, { recursive: true, force: true });
+    }
+  },
+);
+
+test("without floor plans there is no minimap and no floor plan toggle", { skip }, async () => {
+  await open("#yaw=0&pitch=0&fov=90");
+  assert.equal(
+    await page.eval(`!!document.querySelector("[data-testid=floorplan-minimap]")`),
+    false,
+  );
+  assert.equal(
+    await page.eval(`getComputedStyle(document.getElementById("floorplan-toggle")).display`),
+    "none",
+  );
+});
+
+test("a scene on no floor plan has no minimap and no floor plan toggle", { skip }, async () => {
+  const planDir = mkdtempSync(join(tmpdir(), "cubemap-floorplan-none-"));
+  try {
+    const p: TourProject = {
+      ...floorplanProject,
+      scenes: [
+        floorplanProject.scenes[0]!,
+        { ...floorplanProject.scenes[1]!, floorplanPosition: null },
+      ],
+    };
+    await exportCubemapTour(p, folderSink(planDir), {
+      ...deps,
+      getFloorplanImage: async () => planPng(400, 200),
+      assets: {
+        ...deps.assets,
+        minimap: {
+          js: readFileSync(new URL("../floorplan/minimap.js", import.meta.url), "utf8"),
+          css: readFileSync(new URL("../floorplan/minimap.css", import.meta.url), "utf8"),
+        },
+      },
+    });
+    const shown = () =>
+      page.eval<[string, string]>(`[
+        getComputedStyle(document.querySelector("[data-testid=floorplan-minimap]")).display,
+        getComputedStyle(document.getElementById("floorplan-toggle")).display,
+      ]`);
+    await open("#yaw=0&pitch=0&fov=90", planDir);
+    assert.deepEqual(await shown(), ["block", "flex"], "hall is on a plan");
+    await page.eval(`document.querySelector('#scene-list button[data-scene="b"]').click()`);
+    await page.waitFor(`document.documentElement.dataset.scene === "b"`);
+    assert.deepEqual(await shown(), ["none", "none"], "kitchen is on no plan");
+    await page.eval(`document.querySelector('#scene-list button[data-scene="a"]').click()`);
+    await page.waitFor(`document.documentElement.dataset.scene === "a"`);
+    assert.deepEqual(await shown(), ["block", "flex"], "back to the hall");
+    assert.deepEqual(page.problems, []);
+  } finally {
+    rmSync(planDir, { recursive: true, force: true });
+  }
 });

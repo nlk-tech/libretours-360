@@ -21,6 +21,7 @@ Built with [TanStack Start](https://tanstack.com/router/latest/docs/framework/re
   - **Info** — opens a popup with rich content written in Markdown (bold, italic, links, lists, code)
 - **Visual Tour Editor** — Drag hotspots directly on the panorama canvas, adjust yaw/pitch/zoom in the properties panel, set a per-scene default view (yaw/pitch/zoom), reorder scenes in the sidebar.
 - **Measurement Lines** — Draw a line between two points of a panorama and label it (for example `3,45 m`). Lines stay on the edges you drew them on from any view direction, can be shown or hidden with a **Measurements** button in the editor and in both exported tours, and are included in every export. See [docs/measurements.md](docs/measurements.md).
+- **Floor Plans** — Upload one plan per storey, put each scene on its plan and set which way it looks. The tours show a minimap in a corner of your choice, with an X/Y offset, with a cone that turns as you look around and dots that open the other scenes; a **Floor plan** button shows or hides it in the editor and in both exported tours. See [docs/floorplans.md](docs/floorplans.md).
 - **Theme Builder** — Brand your tours:
   - Overlay elements (logo, image, text) anchored to the viewport with px/% offsets
   - A dedicated Theme Canvas mode with responsive preview, plus a live preview over the 3D panorama
@@ -147,16 +148,17 @@ Exports a viewer powered by Photo Sphere Viewer for full 3D navigation, together
 
 ```
 tour-name-tour-3d/      # a .zip of this folder in the browser
-├── index.html          # Viewer with the tour data embedded (3D navigation, hotspots, measurement lines)
-└── panoramas/
-    ├── scene-1.jpg
-    ├── scene-2.jpg
-    └── ...
+├── index.html          # Viewer with the tour data embedded (3D navigation, hotspots, measurement lines, floor plan minimap)
+├── panoramas/
+│   ├── scene-1.jpg
+│   ├── scene-2.jpg
+│   └── ...
+└── floorplans/         # Floor plan images, if the project has any
 ```
 
 Because the module loading it relies on browser CORS rules, this export **must be served over HTTP(S)** — it will not run directly from `file://`.
 
-The theme (logo, title visibility and custom overlays) is embedded in `index.html`, with images inlined as data URLs. Measurement lines are included, with a **Measurements** button to show or hide them.
+The theme (logo, title visibility and custom overlays) is embedded in `index.html`, with images inlined as data URLs. Measurement lines are included, with a **Measurements** button to show or hide them, and so is the floor plan minimap, with a **Floor plan** button.
 
 ### Standalone 3D — CSS Cubemap folder
 
@@ -168,11 +170,12 @@ tour-name-tour-3d-cubemap/   # a .zip of this folder in the browser
 ├── project.json         # Full project data
 ├── panoramas/
 │   └── <scene>/{front,right,back,left,top,bottom}.jpg
-└── thumbnails/
-    └── <scene>.jpg
+├── thumbnails/
+│   └── <scene>.jpg
+└── floorplans/          # Floor plan images, if the project has any
 ```
 
-Each panorama is converted into six cube faces at export time so the resulting viewer works straight from `file://`, sidestepping the CORS restrictions that Web 3D export runs into. The theme (logo, title visibility and custom overlays) and the measurement lines are included, as in Web 3D.
+Each panorama is converted into six cube faces at export time so the resulting viewer works straight from `file://`, sidestepping the CORS restrictions that Web 3D export runs into. The theme (logo, title visibility and custom overlays), the measurement lines and the floor plan minimap are included, as in Web 3D.
 
 ### Project package — `.ltproj`
 
@@ -192,7 +195,7 @@ See [docs/project-package.md](docs/project-package.md) for the details of the fo
 
 ### JSON Export
 
-Exports only the project data (scenes, hotspots, measurement lines, theme settings) as a JSON file, for other tools or scripts. **It does not contain the images**: it only refers to them, and they stay in the app that exported the file. Importing such a JSON somewhere else gives a project without its panoramas and theme images; the app shows a warning when that happens. To move a project with its images, use `.ltproj`.
+Exports only the project data (scenes, hotspots, measurement lines, floor plan positions, theme settings) as a JSON file, for other tools or scripts. **It does not contain the images**: it only refers to them, and they stay in the app that exported the file. Importing such a JSON somewhere else gives a project without its panoramas, theme images and floor plan images; the app shows a warning when that happens. To move a project with its images, use `.ltproj`.
 
 ---
 
@@ -222,6 +225,8 @@ src/
 ├── components/
 │   ├── studio/
 │   │   ├── PanoCanvas.tsx          # 360° viewer with hotspots and measurement lines
+│   │   ├── FloorplanMinimap.tsx    # Floor plan minimap: navigation, placing scenes, view direction
+│   │   ├── FloorplansPanel.tsx     # Floor plans tab: plans, levels, current scene's floor
 │   │   ├── LeftSidebar.tsx         # Scenes, theme and floorplans tabs
 │   │   ├── PropertiesPanel.tsx     # Scene, hotspot and measurement property editor
 │   │   ├── ThemeCanvas.tsx         # Theme Canvas 2D editing mode
@@ -235,6 +240,8 @@ src/
 │   ├── export-sink.ts              # Where tour exports go: a folder (desktop) or a zip (browser)
 │   ├── save-file.ts                # Single-file saves: "Save as" dialog (desktop) or download (browser)
 │   ├── measure-geometry.ts         # Great-circle math for measurement lines
+│   ├── floorplan-geometry.ts       # View direction math for floor plans
+│   ├── floorplan/                  # Floor plan minimap of the exported tours + image export
 │   ├── project-package.ts          # .ltproj project package (project + images) export/import
 │   ├── cubemap/                    # Standalone 3D export: panorama → cube faces, CSS 3D viewer, no webserver
 │   ├── project-schema.ts           # Zod schema + versioned project migrations
@@ -279,6 +286,14 @@ Details, including the data format: [docs/measurements.md](docs/measurements.md)
 
 ---
 
+## How Floor Plans Work
+
+Each scene can sit on one floor plan, at a position given as fractions of the image's width and height. Its `heading` is the direction on the plan that the centre of the panorama looks at; the minimap's cone points at `heading + yaw`, so it turns with the view. In the editor the heading is set by pointing the panorama at a landmark and clicking it on the plan, or by dragging the cone's handle.
+
+Details, including the data format: [docs/floorplans.md](docs/floorplans.md).
+
+---
+
 ## How Hotspots Work
 
 Hotspots are positioned on the 360° image using spherical coordinates:
@@ -294,7 +309,6 @@ Each hotspot has a **type** (`door` and `arrow` for navigation to a target scene
 
 Planned features are described in [`docs/future-plans/`](docs/future-plans/README.md), including:
 
-- Multi-level floorplans with scene position and live viewing direction (minimap in the exported tours)
 - Web deploy (Docker / Apache) and removal of the Lovable build wrapper
 - Localization of the Web 3D export viewer
 

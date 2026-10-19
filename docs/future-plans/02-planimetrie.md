@@ -1,167 +1,123 @@
 # Planimetrie multi-piano con posizione e direzione di vista
 
+> **Stato: implementato**, tranne il TODO in fondo (conflitti con gli overlay del tema). La documentazione aggiornata è in [docs/floorplans.md](../floorplans.md). Rispetto a quanto scritto qui, l'implementazione:
+> - negli export non ha pan e zoom sulla minimappa, solo il pulsante per ingrandirla;
+> - oltre all'angolo ha un offset X/Y in px o %, come gli elementi del tema (`floorplanOffset`), sempre senza coprire i controlli del viewer;
+> - nell'editor il segnaposto e la maniglia del cono si trascinano anche nella minimappa piccola;
+> - la minimappa (e il suo pulsante) compare solo nelle scene posizionate su una planimetria; "Nessuna planimetria" la toglie dalla scena;
+> - nello standalone esclude la minimappa dal trascinamento della vista, così il clic sui segnaposti arriva;
+> - scrive le immagini dei piani in `floorplans/` anche nel Web 3D, e lascia fuori un piano la cui immagine non si legge.
+
 ## Context
-L'utente vuole caricare una o più planimetrie dell'area del tour, una per piano: interrato, seminterrato, terra, rialzato, primo, ecc. Per ogni scena 360° deve poter indicare sulla planimetria:
+L'utente carica una o più planimetrie dell'area del tour, una per piano: interrato, seminterrato, terra, rialzato, primo, ecc. Per ogni scena 360° indica sulla planimetria:
 - **dove si trova**, con un segnaposto rotondo;
-- **dove sta guardando**, con un arco/cono attorno al segnaposto che l'utente ruota per allinearlo alla foto.
+- **dove sta guardando**, con un cono attorno al segnaposto, allineato alla foto.
 
-Nel tour esportato (export 3D PSV e cubemap standalone) la planimetria compare come **minimappa interattiva**:
-- piano corrente;
-- segnaposto della scena attiva;
-- cono che ruota in tempo reale con la vista;
-- click su un altro segnaposto per navigare a quella scena;
-- selettore piano.
+La planimetria compare come **minimappa in sovrimpressione** in tutti e tre i viewer: app (editor e anteprima), export Web 3D, export standalone. La minimappa mostra:
+- il piano della scena corrente;
+- i segnaposti, cliccabili per navigare;
+- il cono della scena attiva, che ruota in tempo reale con la vista;
+- un selettore del piano, se i piani sono più di uno.
 
-Oggi esiste solo uno stub:
-- tipo `Floorplan { id, name, imageUrl }` in [src/types/tour.ts:97](src/types/tour.ts#L97);
-- schema in [src/lib/project-schema.ts:149](src/lib/project-schema.ts#L149);
-- tab "Planimetrie" nella sidebar con pulsante disabilitato ("Presto disponibile") in [LeftSidebar.tsx:581](src/components/studio/LeftSidebar.tsx#L581).
+Ogni viewer ha un **toggle** etichettato "Planimetria" per mostrarla o nasconderla.
 
-Non esistono upload, visualizzazione, legame con le scene o export.
+Stato di partenza:
+- il tipo `Floorplan { id, name, imageUrl }` in `src/types/tour.ts`;
+- `floorplanSchema` in `src/lib/project-schema.ts`;
+- il tab "Planimetrie" con un pulsante disabilitato in `LeftSidebar.tsx` (circa L658).
 
-## Modello di direzione (il punto chiave)
-Il panorama ha un suo yaw 0, il centro dell'immagine equirettangolare. La planimetria ha i suoi assi. Basta un solo numero per scena:
+Il pacchetto `.ltproj` porta già le immagini di `floorplans[].imageUrl` (`project-package.ts`).
 
-`floorplanHeading` = angolo sulla planimetria (gradi, 0 = verso l'alto, orario) che corrisponde a yaw 0 del panorama.
+## Decisioni
+- Si lavora nel branch `floorplans`.
+- Più piani, ciascuno con un `level` numerico che serve per l'ordinamento.
+- **Angolo della minimappa:** è un'impostazione di progetto, uno dei 4 angoli, di default in basso a sinistra.
+- **Editor:** si lavora sulla minimappa stessa, che si espande in un pannello grande sopra il viewer. Non c'è un pannello separato né una finestra modale.
+- **Calibrazione della direzione**, in due modi:
+  - **clic sul riferimento**: si orienta il panorama con un riferimento (una porta) al centro, poi lo si clicca sulla planimetria e l'angolo si calcola;
+  - **maniglia dell'arco**: la si trascina per la rifinitura.
+- Gli export Web 3D e standalone si fanno nello stesso branch.
 
-- **Calibrazione nell'editor:**
-  - l'utente orienta la vista 360° verso un riferimento riconoscibile (una porta, una finestra);
-  - poi ruota l'arco sulla planimetria finché punta allo stesso riferimento;
-  - si salva `floorplanHeading = angoloArco − yawCorrente`.
-- **Visualizzazione:** il cono punta a `floorplanHeading + yawCorrente`, quindi segue la vista in tempo reale sia nell'editor sia nel viewer esportato.
-- **Ampiezza del cono:** ricavata dal FOV/zoom corrente (opzionale, altrimenti 90° fissi).
+## Modello di direzione
+Il panorama ha il suo yaw 0, il centro dell'immagine equirettangolare. La planimetria ha i suoi assi. Basta un numero per scena:
 
-## Modello dati
-In [src/types/tour.ts](src/types/tour.ts):
-- `Floorplan { id; name; imageUrl; level: number; order?: number }`
-  - `level`: -2 interrato, -1 seminterrato, 0 terra, 0.5 rialzato, 1 primo…; serve per l'ordinamento;
-  - `name` è libero ("Piano rialzato").
-- `Scene.floorplanPosition?: { floorplanId: string; x: number; y: number; heading: number }`
-  - `x`/`y` sono normalizzati 0..1 rispetto all'immagine, quindi indipendenti dalla risoluzione;
-  - una scena sta su al massimo un piano.
-- `TourProject.showFloorplanMinimap: boolean`, default true.
+`heading` = angolo sulla planimetria (gradi, 0 = verso l'alto, orario) che corrisponde a yaw 0 del panorama.
 
-In [src/lib/project-schema.ts](src/lib/project-schema.ts):
-- estendere `floorplanSchema` con `level` (default 0);
-- validare `imageUrl` con `isSafeAssetRef`, come per i panorami e il tema, perché oggi manca;
-- aggiungere `floorplanPosition` opzionale a `sceneSchema` e `showFloorplanMinimap`;
-- bump di `CURRENT_SCHEMA_VERSION` con uno step in `migrateProject()`.
+- **Visualizzazione:** il cono punta a `heading + yaw`.
+- **Maniglia:** `heading = angoloArco − yaw`.
+- **Clic sul riferimento:** `angoloArco = atan2` del vettore segnaposto → clic, calcolato in pixel e non in coordinate normalizzate, perché x e y sono normalizzati separatamente. Poi come la maniglia.
+- **Ampiezza del cono:** il FOV corrente del viewer.
 
-Se nel frattempo si implementano le linee di misura (piano 01), coordinare il numero di versione.
+## Modello dati (schema v3)
+In `src/types/tour.ts`:
+- `Floorplan { id; name; imageUrl; level }`
+  - `level`: -2 interrato, -1 seminterrato, 0 terra, 0.5 rialzato, 1 primo…
+- `Scene.floorplanPosition?: { floorplanId; x; y; heading }`
+  - `x`/`y` normalizzati 0..1 sull'immagine;
+  - una scena sta al più su un piano.
+- `TourProject.showFloorplan: boolean`, default `true`: se la minimappa è visibile all'apertura del tour esportato.
+- `TourProject.floorplanCorner`: `top-left | top-right | bottom-left | bottom-right`, default `bottom-left`.
 
-[src/lib/storage.ts:239](src/lib/storage.ts#L239) `cloneWithNewIds`:
-- rimappare `floorplanId` nelle scene;
-- copiare gli asset immagine, così il progetto duplicato non punta agli asset dell'originale.
+In `src/lib/project-schema.ts`:
+- `level` con default 0;
+- `imageUrl` validato con `isSafeAssetRef`;
+- `floorplanPosition` opzionale;
+- i nuovi campi del progetto con i loro default;
+- id dei piani unici;
+- un `floorplanPosition` che punta a un piano inesistente viene scartato;
+- step `if (version < 3)` in `migrateProject()`.
 
-## Storage immagini
-Riusare gli asset generici `asset:<key>` del tema in [src/lib/theme-assets.ts](src/lib/theme-assets.ts):
-- `putThemeAsset`, `resolveThemeAssetUrl`, `deleteThemeAsset`, helper data URL;
-- eventualmente generalizzarli o rinominarli in un modulo `project-assets.ts` condiviso.
+`cloneWithNewIds` in `src/lib/storage.ts` dà nuovi id ai piani e rimappa `floorplanPosition.floorplanId`.
 
-Formati accettati: PNG/JPG/WebP/SVG. Il PDF resta escluso; l'utente può esportarlo in immagine.
+## Immagini
+Si usano gli asset generici `asset:<key>` del tema (`src/lib/theme-assets.ts`), che stanno in `projects/<id>/assets/`. Formati: PNG, JPG, WebP, SVG. Il PDF è escluso. Quando un piano viene eliminato o la sua immagine sostituita, l'asset vecchio si cancella.
 
 ## Editor
-**Sidebar, tab Planimetrie ([LeftSidebar.tsx:581](src/components/studio/LeftSidebar.tsx#L581))**
-- Sostituire il placeholder con una lista dei piani ordinata per `level`:
-  - miniatura, nome, livello (Select con preset + valore libero);
-  - rinomina, sostituisci immagine, elimina (alert-dialog che avvisa delle scene collegate).
-- Pulsante "Aggiungi planimetria" con file input.
-- Click su un piano: lo apre nel pannello planimetria.
+- **Tab Planimetrie:**
+  - lista dei piani ordinata per livello, con miniatura, nome, livello, sostituisci immagine ed elimina (con avviso sulle scene collegate);
+  - "Aggiungi planimetria";
+  - impostazioni di progetto: mostra nel tour esportato, angolo;
+  - per la scena attiva: piano, oppure "non posizionata", e "Rimuovi dalla planimetria".
+- **Minimappa** (`FloorplanMinimap.tsx`, dentro PanoCanvas), nell'angolo scelto:
+  - piccola di default, con un pulsante per espanderla;
+  - da espansa ha pan e zoom (rotellina e trascinamento);
+  - in modalità Modifica e da espansa: "Posiziona qui", trascinamento del segnaposto, maniglia dell'arco, "Punta un riferimento".
+- **Pulsanti già presenti negli angoli:** in basso a sinistra c'è "Imposta vista predefinita" (solo in Modifica), in basso a destra la barra zoom/misure. La minimappa si sposta sopra di essi.
+- **PanoCanvas:** segue yaw e FOV tramite `position-updated` / `zoom-updated`, con un throttling via `requestAnimationFrame`.
 
-**Nuovo componente `src/components/studio/FloorplanPanel.tsx`**
-- Riquadro sovrapposto al PanoCanvas, ridimensionabile/ingrandibile, oppure pannello affiancato con `resizable`.
-- Mostra il piano selezionato:
-  - **SVG sopra `<img>`**, con coordinate normalizzate 0..1 e `viewBox` sulle dimensioni naturali;
-  - pan/zoom semplice fatto a mano (wheel + drag), sul modello del drag in [ThemeOverlayCanvas.tsx](src/components/studio/ThemeOverlayCanvas.tsx); nessuna dipendenza nuova.
-- **Segnaposti:**
-  - un cerchio per ogni scena posizionata su quel piano;
-  - quello della scena attiva è evidenziato;
-  - click su un segnaposto = cambia scena attiva.
-- **Posizionare la scena attiva:**
-  - pulsante "Posiziona qui questa scena", poi click sulla planimetria;
-  - oppure trascinare il segnaposto della scena attiva.
-- **Direzione:**
-  - attorno al segnaposto attivo, un arco esterno con maniglia;
-  - trascinando la maniglia l'arco ruota (`atan2` dal centro);
-  - al rilascio si salva `heading = angoloArco − yawCorrente`, con normalizzazione a 0..360;
-  - pulsante "Reset direzione".
-- Cono dei segnaposti: settore SVG (`path` con arco), angolo `heading + yaw`.
+## Export
+- Script minimappa condiviso, vanilla, in `src/lib/floorplan/minimap.js` + `minimap.css`:
+  - si inietta come testo in entrambi i viewer, come `viewer.js` del cubemap;
+  - non contiene il letterale `http://`.
+- **Web 3D:**
+  - le immagini vanno in `floorplans/<file>`;
+  - JSON con piani, posizioni, `SHOW_FLOORPLAN` e `FLOORPLAN_CORNER`;
+  - la minimappa si aggiorna su `position-updated` / `zoom-updated`;
+  - toggle accanto a quello delle misure.
+- **Standalone:**
+  - immagini scritte con `sink.writeFile("floorplans/…")`;
+  - `CubemapTour` esteso, con `version` 2;
+  - `setView` chiamato dal loop di render;
+  - toggle in `#controls`.
+- **Su mobile** la minimappa parte piccola.
 
-**[PanoCanvas.tsx](src/components/studio/PanoCanvas.tsx)**
-- Aggiungere la prop `onViewChange?(yawDeg, fovDeg)`.
-- Agganciare il listener PSV `position-updated` (e `zoom-updated` per il FOV) accanto a `click`/`zoom-updated` (circa L230–261), usando `addEventListener` come già fatto.
-- Throttling con `requestAnimationFrame`.
-
-**[editor.$id.tsx](src/routes/editor.$id.tsx)**
-- Nuovo stato: `currentYaw`, solo vista e non persistito, alimentato da `onViewChange`.
-- Nuovo stato: `selectedFloorplanId`, che segue il piano della scena attiva quando si cambia scena.
-- Callback, tutti via `update(draft => ...)` con autosave esistente:
-  - `addFloorplan`, `updateFloorplan`, `deleteFloorplan` (rimuove anche i `floorplanPosition` collegati);
-  - `setScenePosition`, `setSceneHeading`.
-- Toggle "Mostra planimetria" nella toolbar.
-
-## Export: logica condivisa
-Nuovo modulo `src/lib/floorplan-minimap.ts`, che esporta una **stringa JS** autonoma:
-- vanilla, senza dipendenze, iniettata in entrambi i viewer;
-- funzione `createMinimap(container, { floorplans, scenes, onNavigate })`;
-- metodi `.setScene(id)`, `.setYaw(deg)`, `.setFov(deg)`;
-- disegna SVG + img, gestisce il selettore piano e il click sui segnaposti.
-
-Così la logica della minimappa esiste una volta sola per i due export. Attenzione alle backslash se finisce dentro template literal (vedi il bug regex corretto prima). Meglio un file `.js` importato come stringa raw (`?raw` di Vite), come già fa il cubemap con `viewer.js` se applicabile.
-
-Testi del viewer: niente o pochi (nome piano). Usare il dizionario standalone esistente (vedi memoria i18n).
-
-## Export 3D (PSV), [src/lib/export.ts](src/lib/export.ts)
-- `buildZip` (L392):
-  - risolvere le immagini dei piani come `resolvePanoramaForExport` (L374) in `floorplans/<slug>.<ext>`;
-  - riscrivere `imageUrl` con il path relativo.
-- `viewerHtml3D`:
-  - includere `floorplans`, `floorplanPosition` delle scene e `showFloorplanMinimap` nel JSON (L37);
-  - iniettare lo script minimappa;
-  - collegare `viewer.addEventListener('position-updated')` a `minimap.setYaw`;
-  - cambio scena a `minimap.setScene`;
-  - `onNavigate` alla funzione di navigazione esistente.
-- Pulsante per mostrare/nascondere la minimappa; su mobile parte chiusa.
-
-## Export cubemap standalone
-- In [src/lib/cubemap/export.ts](src/lib/cubemap/export.ts):
-  - scrivere le immagini dei piani con `sink.writeFile("floorplans/…")`, come le facce;
-  - le immagini vanno nei file e non come data URL, per non gonfiare `project.json`.
-- In [src/lib/cubemap/build-html.ts](src/lib/cubemap/build-html.ts):
-  - estendere `CubemapTour` e `buildTour` con `floorplans` e `floorplanPosition`;
-  - incrementare la `version` del formato.
-- In [src/lib/cubemap/viewer/viewer.js](src/lib/cubemap/viewer/viewer.js):
-  - montare la minimappa;
-  - chiamare `setYaw` dal loop di render (dove già ricalcola gli hotspot, circa L554);
-  - `onNavigate` alla funzione di cambio scena.
-- Verificare che le immagini funzionino da `file://`, perché `<img>` locali sono ok (vedi memoria cubemap).
-
-## i18n
-Chiavi in [src/locales/en.json](src/locales/en.json) / [it.json](src/locales/it.json) sotto `editor.sidebar.floorplans.*`:
-- aggiornare `hint`;
-- `add`, `rename`, `replace`, `delete`, `deleteConfirm`, `level`, preset dei livelli;
-- `placeScene`, `resetHeading`, `notPlaced`.
-
-Poi `editor.header.toggleFloorplan` e `editor.toasts.*`.
+## TODO (fuori da questo branch)
+- **Conflitti con gli overlay del tema.** Un overlay ancorato allo stesso angolo della minimappa può sovrapporsi a essa. Possibili verifiche:
+  - un avviso nell'editor quando un overlay ha la stessa `position` di `floorplanCorner`, con il suggerimento di cambiare angolo;
+  - poi, un controllo sulle aree effettive (bounding box misurati) nella preview del Theme Canvas, tenendo conto degli offset e delle dimensioni dell'overlay.
 
 ## Verifica
-- Test unitari:
-  - la matematica dell'heading (calibrazione → visualizzazione, wrap 0/360, yaw negativi);
-  - lo schema e la migrazione (progetto vecchio senza `level`/`floorplanPosition`);
-  - `cloneWithNewIds` con rimappatura;
-  - `buildTour` con planimetrie;
-  - estensione degli e2e del cubemap esistenti ([src/lib/cubemap/e2e.test.ts](src/lib/cubemap/e2e.test.ts)).
-- Syntax check degli script generati (stile `check.mjs` usato per il fix regex).
-- Manuale in `npm run dev` e Tauri:
-  - caricare 2 piani;
-  - posizionare 3 scene;
-  - calibrare la direzione su una porta e ruotare la vista: il cono deve seguire coerentemente;
-  - ricaricare (persistenza);
-  - duplicare il progetto;
-  - eliminare un piano con scene collegate.
-- Export 3D aperto via server ed export cubemap aperto da `file://`:
-  - minimappa visibile;
-  - cono sincronizzato;
-  - click su un segnaposto che naviga;
-  - cambio piano;
-  - comportamento su mobile.
+- **Test unitari:**
+  - geometria: wrap 0/360, yaw negativi, andata e ritorno calibrazione → visualizzazione, riferimento su un'immagine non quadrata;
+  - migrazione v2 → v3;
+  - `cloneWithNewIds`;
+  - dati e script dei due export;
+  - e2e del cubemap esteso.
+- **Manuale nell'app, nel browser e in Tauri:**
+  - 2 piani, 3 scene posizionate;
+  - calibrazione;
+  - toggle;
+  - cambio angolo;
+  - persistenza, duplicazione, eliminazione di un piano con scene collegate.
+- **Export:**
+  - Web 3D via HTTP e standalone da `file://`: minimappa, cono, navigazione, cambio piano, toggle.
