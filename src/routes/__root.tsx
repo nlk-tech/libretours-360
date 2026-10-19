@@ -123,6 +123,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // The desktop SPA (main.tsx) mounts into index.html's <div id="root">, which already has
+  // <html>/<body>: rendering them again inside the div makes React 19 loop forever while
+  // dispatching the first click, freezing the window. SSR hydrates the whole document instead.
+  if (typeof document !== "undefined" && document.getElementById("root")) {
+    return (
+      <>
+        <HeadContent />
+        {children}
+      </>
+    );
+  }
   return (
     <html lang="en">
       <head>
