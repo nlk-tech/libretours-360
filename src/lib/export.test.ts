@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
+import { readFileSync } from "node:fs";
 import type { ThemeOverlayElement, TourProject } from "@/types/tour";
 import { CURRENT_SCHEMA_VERSION } from "@/types/tour";
 import { viewerHtml3D, writeWeb3DTour } from "./export";
@@ -34,6 +35,7 @@ const project = (over: Partial<TourProject> = {}): TourProject => ({
       defaultPitch: 0,
       hotspots: [],
       measurements: [],
+      floorplanPosition: null,
     },
   ],
   theme: {
@@ -47,6 +49,9 @@ const project = (over: Partial<TourProject> = {}): TourProject => ({
   },
   floorplans: [],
   showMeasurements: true,
+  showFloorplan: true,
+  floorplanCorner: "bottom-left",
+  floorplanOffset: { x: 20, y: 20, unit: "px" },
   ...over,
 });
 
@@ -249,4 +254,57 @@ test("Web 3D export writes index.html through the sink; remote panoramas stay as
   await writeWeb3DTour(p, { writeFile: async (path, data) => void files.set(path, data) });
   assert.deepEqual([...files.keys()], ["index.html"]);
   assert.match(String(files.get("index.html")), /https:\/\/example\.com\/hall\.jpg/);
+});
+
+// ─── Floor plan minimap ────────────────────────────────────────────────────
+
+const minimap = {
+  js: readFileSync(new URL("./floorplan/minimap.js", import.meta.url), "utf8"),
+  css: readFileSync(new URL("./floorplan/minimap.css", import.meta.url), "utf8"),
+};
+
+const withFloorplan = () => {
+  const p = project({
+    floorplanCorner: "top-right",
+    showFloorplan: false,
+    floorplanOffset: { x: 5, y: 10, unit: "%" },
+  });
+  p.floorplans = [{ id: "fp1", name: "Ground", imageUrl: "asset:g.png", level: 0 }];
+  p.scenes[0]!.floorplanPosition = { floorplanId: "fp1", x: 0.25, y: 0.5, heading: 90 };
+  return p;
+};
+
+/** The module script with its imports removed, as a function body. */
+const moduleBody = (html: string) =>
+  /<script type="module">([\s\S]*?)<\/script>/.exec(html)![1]!.replace(/^\s*import .*$/gm, "");
+
+test("Web 3D: floors, placements and minimap settings reach the viewer", () => {
+  const html = viewerHtml3D(withFloorplan(), {
+    floorplans: [{ id: "fp1", name: "Ground", level: 0, image: "./floorplans/ground-1.png" }],
+    minimap,
+  });
+  const body = moduleBody(html);
+  assert.match(
+    body,
+    /const FLOORPLANS = \[\{"id":"fp1","name":"Ground","level":0,"image":"\.\/floorplans\/ground-1\.png"\}\]/,
+  );
+  assert.match(body, /"floorplanPosition":\{"floorplanId":"fp1","x":0\.25,"y":0\.5,"heading":90\}/);
+  assert.match(body, /const SHOW_FLOORPLAN = false;/);
+  assert.match(body, /const FLOORPLAN_CORNER = "top-right";/);
+  assert.match(body, /const FLOORPLAN_OFFSET = \{"x":5,"y":10,"unit":"%"\};/);
+  assert.match(body, /function createFloorplanMinimap\(/);
+  assert.match(html, /\.fpm-top-right/);
+  // The whole inline module (viewer + minimap) is valid JavaScript.
+  assert.doesNotThrow(() => new vm.Script(`(async () => {${body}})`));
+});
+
+test("Web 3D: a placement on a floor that was not exported is dropped", () => {
+  const body = moduleBody(viewerHtml3D(withFloorplan(), { floorplans: [], minimap }));
+  assert.match(body, /"floorplanPosition":null/);
+  assert.match(body, /const FLOORPLANS = \[\];/);
+});
+
+test("Web 3D: without floors there is no minimap and no floor plan toggle", async () => {
+  const els = await runViewer(viewerHtml3D(project()));
+  assert.ok(!els.get("floorplan-toggle")!.classList.contains("available"));
 });

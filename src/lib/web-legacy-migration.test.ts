@@ -79,6 +79,7 @@ const legacyScene = (id: string, panoramaUrl: string) => ({
   defaultPitch: 0,
   hotspots: [],
   measurements: [],
+  floorplanPosition: null,
 });
 
 function newProvider(thumbnails = true) {

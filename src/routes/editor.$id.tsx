@@ -6,6 +6,8 @@ import {
   ChevronDown,
   Compass,
   Download,
+  Eye,
+  EyeOff,
   FileArchive,
   FolderOutput,
   MapPin,
@@ -14,10 +16,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type {
+  Floorplan,
   Hotspot,
   MeasurePoint,
   Measurement,
   Scene,
+  ScenePlacement,
   Theme,
   ThemeOverlayElement,
   ThemeOverlayElementStyle,
@@ -60,6 +64,8 @@ import { Badge } from "@/components/ui/badge";
 import { LeftSidebar, type SidebarTab } from "@/components/studio/LeftSidebar";
 import { PropertiesPanel } from "@/components/studio/PropertiesPanel";
 import { PanoCanvas } from "@/components/studio/PanoCanvas";
+import { FloorplanMinimap } from "@/components/studio/FloorplanMinimap";
+import { FloorplansPanel } from "@/components/studio/FloorplansPanel";
 import { ThemeCanvas } from "@/components/studio/ThemeCanvas";
 import { ThemeOverlayCanvas } from "@/components/studio/ThemeOverlayCanvas";
 import { ThemeElementEditor } from "@/components/studio/ThemeElementEditor";
@@ -104,6 +110,12 @@ function Studio() {
   // is project.showMeasurements.
   const [showMeasurements, setShowMeasurements] = useState(true);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState<string | null>(null);
+  // Floor plan minimap: view-only toggle (the exported tour's default is
+  // project.showFloorplan), expanded state, and the view it draws the cone from.
+  const [showFloorplan, setShowFloorplan] = useState(true);
+  const [floorplanExpanded, setFloorplanExpanded] = useState(false);
+  const [panoView, setPanoView] = useState({ yaw: 0, fov: 90 });
+  const [floorplanUrls, setFloorplanUrls] = useState<Record<string, string>>({});
   const [sceneUrls, setSceneUrls] = useState<Record<string, string>>({});
   const [logoPreviewUrl, setLogoPreviewUrl] = useState("");
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("scenes");
@@ -251,6 +263,37 @@ function Studio() {
     };
   }, [project?.theme.logoUrl]);
 
+  const floorplanSignature = project
+    ? JSON.stringify(project.floorplans.map((f) => [f.id, f.imageUrl]))
+    : "";
+
+  useEffect(() => {
+    const current = projectRef.current;
+    if (!current) return;
+    const { id: projectId, floorplans } = current;
+    let active = true;
+    (async () => {
+      const entries: Record<string, string> = {};
+      for (const f of floorplans) {
+        try {
+          entries[f.id] = await resolveThemeAssetUrl(projectId, f.imageUrl);
+        } catch (e) {
+          console.error(`Cannot load floor plan "${f.name}"`, e);
+          entries[f.id] = "";
+        }
+      }
+      if (active) setFloorplanUrls(entries);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [floorplanSignature]);
+
+  const sortedFloorplans = useMemo(
+    () => [...(project?.floorplans ?? [])].sort((a, b) => a.level - b.level),
+    [project?.floorplans],
+  );
+
   const activeScene = useMemo(
     () => project?.scenes.find((s) => s.id === activeSceneId) ?? null,
     [project, activeSceneId],
@@ -265,6 +308,12 @@ function Studio() {
     }, 600);
     return () => window.clearTimeout(timer);
   }, [project, loaded, flushSave, saver]);
+
+  // Only a scene placed on a plan has a minimap.
+  const activeScenePlaced = !!(
+    activeScene?.floorplanPosition &&
+    project?.floorplans.some((f) => f.id === activeScene.floorplanPosition!.floorplanId)
+  );
 
   const selectedHotspot = useMemo(
     () => activeScene?.hotspots.find((h) => h.id === selectedHotspotId) ?? null,
@@ -469,6 +518,7 @@ function Studio() {
       defaultPitch: 0,
       hotspots: [],
       measurements: [],
+      floorplanPosition: null,
     }));
     update((draft) => ({
       ...draft,
@@ -522,6 +572,98 @@ function Studio() {
         console.warn("Could not delete the logo", e),
       );
     }
+  };
+
+  const patchFloorplan = (floorplanId: string, patch: Partial<Floorplan>) =>
+    update((draft) => ({
+      ...draft,
+      floorplans: draft.floorplans.map((f) => (f.id === floorplanId ? { ...f, ...patch } : f)),
+    }));
+
+  /** Stores a floor plan image and returns its reference, or null (after a toast) on failure. */
+  const storeFloorplanImage = async (file: File): Promise<string | null> => {
+    const projectId = projectRef.current?.id;
+    if (!projectId) return null;
+    try {
+      return await putThemeAsset(projectId, uid("floorplan-img"), file);
+    } catch (e) {
+      console.error("Could not upload the floor plan", e);
+      toast.error(t("editor.toasts.floorplanUploadFailed"), {
+        description: describeStorageError(e),
+      });
+      return null;
+    }
+  };
+
+  const handleAddFloorplan = async (file: File) => {
+    const ref = await storeFloorplanImage(file);
+    if (!ref) return;
+    const floorplan: Floorplan = {
+      id: uid("floorplan"),
+      name: file.name.replace(/\.[^.]+$/, ""),
+      imageUrl: ref,
+      level: 0,
+    };
+    update((draft) => {
+      const levels = draft.floorplans.map((f) => f.level);
+      // The next storey up, so a new plan never lands on an existing level by default.
+      const level = levels.length ? Math.floor(Math.max(...levels)) + 1 : 0;
+      return { ...draft, floorplans: [...draft.floorplans, { ...floorplan, level }] };
+    });
+  };
+
+  const handleReplaceFloorplanImage = async (floorplanId: string, file: File) => {
+    const projectId = projectRef.current?.id;
+    const previousRef =
+      projectRef.current?.floorplans.find((f) => f.id === floorplanId)?.imageUrl ?? "";
+    const ref = await storeFloorplanImage(file);
+    if (!ref) return;
+    patchFloorplan(floorplanId, { imageUrl: ref });
+    if (projectId && previousRef) {
+      deleteThemeAsset(projectId, previousRef).catch((e) =>
+        console.warn("Could not delete the previous floor plan image", e),
+      );
+    }
+  };
+
+  /** Removes the floor plan and takes every scene placed on it off the plan. */
+  const handleDeleteFloorplan = (floorplanId: string) => {
+    const projectId = projectRef.current?.id;
+    const previousRef =
+      projectRef.current?.floorplans.find((f) => f.id === floorplanId)?.imageUrl ?? "";
+    update((draft) => ({
+      ...draft,
+      floorplans: draft.floorplans.filter((f) => f.id !== floorplanId),
+      scenes: draft.scenes.map((s) =>
+        s.floorplanPosition?.floorplanId === floorplanId ? { ...s, floorplanPosition: null } : s,
+      ),
+    }));
+    if (projectId && previousRef) {
+      deleteThemeAsset(projectId, previousRef).catch((e) =>
+        console.warn("Could not delete the floor plan image", e),
+      );
+    }
+  };
+
+  const setScenePlacement = (sceneId: string, placement: ScenePlacement | null) =>
+    patchScene(sceneId, { floorplanPosition: placement });
+
+  /** Sidebar floor picker: a newly placed scene starts in the middle, to be moved on the minimap. */
+  const handleSceneFloorChange = (floorplanId: string | null) => {
+    if (!activeScene) return;
+    if (!floorplanId) {
+      setScenePlacement(activeScene.id, null);
+      return;
+    }
+    const current = activeScene.floorplanPosition;
+    setScenePlacement(activeScene.id, {
+      floorplanId,
+      x: current?.floorplanId === floorplanId ? current.x : 0.5,
+      y: current?.floorplanId === floorplanId ? current.y : 0.5,
+      heading: current?.heading ?? 0,
+    });
+    setShowFloorplan(true);
+    setFloorplanExpanded(true);
   };
 
   const handleActiveSidebarTabChange = (tab: SidebarTab) => {
@@ -1005,6 +1147,34 @@ function Studio() {
           onDeleteThemePreset={handleDeleteThemePreset}
           onExportTheme={handleExportTheme}
           onImportThemeFile={handleImportThemeFile}
+          floorplansPanel={
+            <FloorplansPanel
+              floorplans={sortedFloorplans}
+              floorplanUrls={floorplanUrls}
+              scenes={project.scenes}
+              activeScene={activeScene}
+              showInExport={project.showFloorplan}
+              corner={project.floorplanCorner}
+              onAdd={handleAddFloorplan}
+              onChange={patchFloorplan}
+              onReplaceImage={handleReplaceFloorplanImage}
+              onDelete={handleDeleteFloorplan}
+              onShowInExportChange={(value) =>
+                update((draft) => ({ ...draft, showFloorplan: value }))
+              }
+              onCornerChange={(corner) =>
+                update((draft) => ({ ...draft, floorplanCorner: corner }))
+              }
+              offset={project.floorplanOffset}
+              onOffsetChange={(patch) =>
+                update((draft) => ({
+                  ...draft,
+                  floorplanOffset: { ...draft.floorplanOffset, ...patch },
+                }))
+              }
+              onSceneFloorChange={handleSceneFloorChange}
+            />
+          }
         />
 
         <div className="relative flex min-w-0 flex-1 flex-col">
@@ -1034,6 +1204,34 @@ function Studio() {
             onSelectMeasurement={selectMeasurement}
             onAddMeasurement={addMeasurement}
             onMoveMeasurementPoint={moveMeasurementPoint}
+            onViewChange={setPanoView}
+            extraControls={
+              activeScenePlaced && (
+                <button
+                  type="button"
+                  onClick={() => setShowFloorplan((v) => !v)}
+                  title={
+                    showFloorplan
+                      ? t("editor.viewer.floorplan.hide")
+                      : t("editor.viewer.floorplan.show")
+                  }
+                  aria-pressed={showFloorplan}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border bg-slate-900/80 px-3 py-2 text-xs font-medium backdrop-blur-md transition-colors",
+                    showFloorplan
+                      ? "border-cyan-400/40 text-cyan-300 hover:text-cyan-200"
+                      : "border-slate-700/50 text-slate-400 hover:text-white",
+                  )}
+                >
+                  {showFloorplan ? (
+                    <Eye className="h-3.5 w-3.5" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  )}
+                  {t("editor.viewer.floorplan.toggle")}
+                </button>
+              )
+            }
             onAddHotspot={addHotspot}
             onMoveHotspot={(hotspotId, pitch, yaw) => patchHotspot(hotspotId, { pitch, yaw })}
             onNavigate={(sceneId) => {
@@ -1059,6 +1257,33 @@ function Studio() {
               }
             }}
           />
+
+          {showFloorplan && activeSidebarTab !== "theme" && activeScenePlaced && (
+            <FloorplanMinimap
+              floorplans={sortedFloorplans}
+              floorplanUrls={floorplanUrls}
+              scenes={project.scenes}
+              activeSceneId={activeSceneId}
+              yaw={panoView.yaw}
+              fov={panoView.fov}
+              corner={project.floorplanCorner}
+              offset={project.floorplanOffset}
+              // Never over the Edit/Preview switch (top right), "Set default view"
+              // (bottom left, edit mode) or the zoom bar (bottom right).
+              clearTop={project.floorplanCorner === "top-right" ? 64 : 16}
+              clearBottom={
+                project.floorplanCorner === "bottom-right" || mode === "editor" ? 64 : 16
+              }
+              editable={mode === "editor"}
+              expanded={floorplanExpanded}
+              onExpandedChange={setFloorplanExpanded}
+              onNavigate={(sceneId) => {
+                setActiveSceneId(sceneId);
+                setSelectedHotspotId(null);
+              }}
+              onPlaceScene={setScenePlacement}
+            />
+          )}
 
           {/* Theme Canvas mode: the 3D viewer stays mounted (avoids a costly re-init)
               but is dimmed/blurred and made non-interactive behind a 2D preview. */}

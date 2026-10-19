@@ -26,6 +26,21 @@ export interface Scene {
   hotspots: Hotspot[];
   /** Hand-drawn measurement lines, see Measurement. */
   measurements: Measurement[];
+  /** Where the scene sits on a floor plan, or null when it is not placed. */
+  floorplanPosition: ScenePlacement | null;
+}
+
+/**
+ * A scene's place on a floor plan. `x`/`y` are 0..1 fractions of the image's
+ * width/height (resolution independent). `heading` is the direction on the
+ * plan, in degrees (0 = up, clockwise), that panorama yaw 0 looks at: the
+ * view cone points at `heading + yaw`.
+ */
+export interface ScenePlacement {
+  floorplanId: string;
+  x: number;
+  y: number;
+  heading: number;
 }
 
 /** A direction from the scene's capture point, in degrees (same convention as Hotspot). */
@@ -118,14 +133,29 @@ export interface ThemePreset {
 export interface Floorplan {
   id: string;
   name: string;
+  /** Empty, or an "asset:<key>" reference to a locally stored image (see theme-assets.ts). */
   imageUrl: string;
+  /** Storey, used for ordering: -2 basement, -1 lower ground, 0 ground, 0.5 raised, 1 first, ... */
+  level: number;
 }
+
+/** The viewer corners the floor plan minimap can sit in. */
+export type FloorplanCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
+/** `x` from the left/right edge, `y` from the top/bottom edge of the minimap's corner. */
+export interface FloorplanOffset {
+  x: number;
+  y: number;
+  unit: ThemeOverlayOffsetUnit;
+}
+
+export const DEFAULT_FLOORPLAN_OFFSET: FloorplanOffset = { x: 20, y: 20, unit: "px" };
 
 /**
  * Version of the on-disk project format. Bump it when the shape of TourProject
  * changes and add a step to `migrateProject` in lib/project-schema.ts.
  */
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export interface TourProject {
   /** On-disk format version, see CURRENT_SCHEMA_VERSION. */
@@ -140,6 +170,12 @@ export interface TourProject {
   floorplans: Floorplan[];
   /** Whether measurement lines are visible when the exported tour opens. */
   showMeasurements: boolean;
+  /** Whether the floor plan minimap is visible when the exported tour opens. */
+  showFloorplan: boolean;
+  /** Corner of the viewer where the floor plan minimap sits. */
+  floorplanCorner: FloorplanCorner;
+  /** Distance of the minimap from the two edges of its corner, as for theme overlays. */
+  floorplanOffset: FloorplanOffset;
 }
 
 export const uid = (prefix = "id") =>
@@ -183,5 +219,8 @@ export const createProject = (name = "Untitled Tour"): TourProject => {
     theme: defaultTheme(),
     floorplans: [],
     showMeasurements: true,
+    showFloorplan: true,
+    floorplanCorner: "bottom-left",
+    floorplanOffset: { ...DEFAULT_FLOORPLAN_OFFSET },
   };
 };

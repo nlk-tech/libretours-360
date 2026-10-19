@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlertTriangle,
@@ -126,6 +126,10 @@ interface Props {
   onSelectMeasurement: (id: string | null) => void;
   onAddMeasurement: (a: MeasurePoint, b: MeasurePoint) => void;
   onMoveMeasurementPoint: (id: string, end: "a" | "b", pos: MeasurePoint) => void;
+  /** Current view direction (yaw, degrees, -180..180) and horizontal FOV (degrees), once per frame at most. */
+  onViewChange?: (view: { yaw: number; fov: number }) => void;
+  /** Extra controls shown in the bottom-right bar, before the measurements toggle. */
+  extraControls?: ReactNode;
 }
 
 export function PanoCanvas({
@@ -148,6 +152,8 @@ export function PanoCanvas({
   onSelectMeasurement,
   onAddMeasurement,
   onMoveMeasurementPoint,
+  onViewChange,
+  extraControls,
 }: Props) {
   const { t } = useTranslation();
   // Handlers registered inside effects capture this at mount time; the ref keeps
@@ -181,6 +187,8 @@ export function PanoCanvas({
     onMoveMeasurementPoint,
   });
   measureCallbacksRef.current = { onSelectMeasurement, onAddMeasurement, onMoveMeasurementPoint };
+  const onViewChangeRef = useRef(onViewChange);
+  onViewChangeRef.current = onViewChange;
   // First endpoint of the line being drawn, until the second click.
   const [pendingA, setPendingA] = useState<MeasurePoint | null>(null);
   const pendingARef = useRef<MeasurePoint | null>(null);
@@ -352,6 +360,27 @@ export function PanoCanvas({
     };
     viewer.addEventListener("zoom-updated", onZoom);
 
+    // Feeds the floor plan cone: yaw and FOV, throttled to one call per frame.
+    let viewFrame = 0;
+    const emitView = () => {
+      if (viewFrame) return;
+      viewFrame = requestAnimationFrame(() => {
+        viewFrame = 0;
+        try {
+          const yawDeg = normalizeYawDeg((viewer.getPosition().yaw * 180) / Math.PI);
+          const fov = Number(viewer.state?.hFov) || 90;
+          onViewChangeRef.current?.({ yaw: yawDeg, fov });
+        } catch {
+          // viewer destroyed between the event and the frame
+        }
+      });
+    };
+    viewer.addEventListener("position-updated", emitView);
+    viewer.addEventListener("zoom-updated", emitView);
+    viewer.addEventListener("size-updated", emitView);
+    viewer.addEventListener("ready", emitView);
+    emitView();
+
     setTimeout(() => {
       try {
         viewer.needsUpdate?.();
@@ -370,6 +399,11 @@ export function PanoCanvas({
         canvasEl?.removeEventListener("webglcontextlost", onContextLost);
         viewer.removeEventListener("click", onClick);
         viewer.removeEventListener("zoom-updated", onZoom);
+        viewer.removeEventListener("position-updated", emitView);
+        viewer.removeEventListener("zoom-updated", emitView);
+        viewer.removeEventListener("size-updated", emitView);
+        viewer.removeEventListener("ready", emitView);
+        cancelAnimationFrame(viewFrame);
         viewer.destroy?.();
       } catch (e) {
         // ignore
@@ -1184,6 +1218,7 @@ export function PanoCanvas({
       )}
 
       <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+        {extraControls}
         {/* Measurements visibility: same control in editor and preview */}
         {(scene?.measurements.length ?? 0) > 0 && (
           <button

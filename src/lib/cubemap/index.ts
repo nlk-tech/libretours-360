@@ -5,7 +5,8 @@
  */
 import type { Scene, TourProject } from "@/types/tour";
 import { getBlob, isLocalAssetRef } from "../assets";
-import { resolveOverlaysForExport, resolveThemeImageDataUrl } from "../theme-assets";
+import { getThemeAsset, resolveOverlaysForExport, resolveThemeImageDataUrl } from "../theme-assets";
+import { minimapAssets } from "../floorplan/assets";
 import { generateThumbnail } from "../thumbnails";
 import viewerCss from "./viewer/viewer.css?raw";
 import viewerJs from "./viewer/viewer.js?raw";
@@ -55,7 +56,8 @@ export async function exportCubemapStandalone(
     makeThumbnail: generateThumbnail,
     getLogoDataUrl: () => resolveThemeImageDataUrl(project.id, project.theme.logoUrl),
     getOverlaysForExport: () => resolveOverlaysForExport(project.id, project.theme.overlays),
-    assets: { js: viewerJs, css: viewerCss },
+    getFloorplanImage: (ref) => getThemeAsset(project.id, ref),
+    assets: { js: viewerJs, css: viewerCss, minimap: minimapAssets },
   };
   await exportCubemapTour(project, sink, deps, options);
   await sink.finish();

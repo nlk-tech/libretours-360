@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BookmarkPlus,
@@ -70,6 +70,8 @@ interface Props {
   onDeleteThemePreset: (id: string) => void;
   onExportTheme: () => void;
   onImportThemeFile: (file: File) => void;
+  /** Content of the Floorplans tab (see FloorplansPanel). */
+  floorplansPanel: ReactNode;
 }
 
 export function LeftSidebar({
@@ -102,6 +104,7 @@ export function LeftSidebar({
   onDeleteThemePreset,
   onExportTheme,
   onImportThemeFile,
+  floorplansPanel,
 }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -656,16 +659,7 @@ export function LeftSidebar({
         </TabsContent>
 
         <TabsContent value="floorplans" className="m-0 min-h-0 flex-1 overflow-y-auto p-3">
-          <div className="rounded-lg border border-dashed border-border bg-panel p-6 text-center">
-            <Map className="mx-auto mb-2 h-6 w-6 text-muted-foreground" />
-            <p className="text-xs font-medium">{t("editor.sidebar.floorplans.title")}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {t("editor.sidebar.floorplans.hint")}
-            </p>
-            <Button size="sm" variant="secondary" className="mt-3 w-full" disabled>
-              {t("editor.sidebar.floorplans.add")}
-            </Button>
-          </div>
+          {floorplansPanel}
         </TabsContent>
       </Tabs>
     </aside>

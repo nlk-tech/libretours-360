@@ -42,6 +42,7 @@ const scene = (id: string, panoramaUrl: string) => ({
   defaultPitch: 0,
   hotspots: [],
   measurements: [],
+  floorplanPosition: null,
 });
 
 async function rejectsWith(p: Promise<unknown>, code: string) {

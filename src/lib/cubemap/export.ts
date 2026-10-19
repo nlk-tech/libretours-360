@@ -5,6 +5,7 @@
  *   <folder>/project.json
  *   <folder>/panoramas/<scene>/{front,right,back,left,top,bottom}.jpg
  *   <folder>/thumbnails/<scene>.jpg
+ *   <folder>/floorplans/<floor>-<n>.<ext>
  *
  * Scenes are processed one at a time and written as soon as they are ready, so
  * memory stays at one panorama's worth. `index.html` is written last: a folder
@@ -25,6 +26,7 @@ import {
   type ViewerAssets,
 } from "./build-html";
 import type { CubeFace, ConvertOptions } from "./convert";
+import { writeFloorplanImages } from "../floorplan/export";
 
 /** Destination of the export: a folder on disk, a zip, ... Paths are relative and use "/". */
 import type { ExportSink } from "../export-sink";
@@ -47,6 +49,8 @@ export interface ExportDeps {
    * ready to embed inline. Best-effort: a failure here must not fail the export.
    */
   getOverlaysForExport?(): Promise<ThemeOverlayElement[]>;
+  /** A floor plan image by its reference, or null if it is missing. */
+  getFloorplanImage?(ref: string): Promise<Blob | null>;
   assets: ViewerAssets;
 }
 
@@ -153,7 +157,11 @@ export async function exportCubemapTour(
     }
   }
 
-  const tour = buildTour(project, layout, logoDataUrl, overlays);
+  const floorplans = deps.getFloorplanImage
+    ? await writeFloorplanImages(project.floorplans, sink, deps.getFloorplanImage)
+    : [];
+
+  const tour = buildTour(project, layout, logoDataUrl, overlays, floorplans);
   await sink.writeFile("project.json", buildProjectJson(tour));
   await sink.writeFile("index.html", buildIndexHtml(tour, deps.assets));
 }

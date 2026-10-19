@@ -76,6 +76,15 @@ const sceneSchema = z.object({
   defaultPitch: finiteNumber.default(0),
   hotspots: z.array(hotspotSchema).default([]),
   measurements: z.array(measurementSchema).default([]),
+  floorplanPosition: z
+    .object({
+      floorplanId: z.string().min(1),
+      x: z.number().min(0).max(1),
+      y: z.number().min(0).max(1),
+      heading: finiteNumber.default(0),
+    })
+    .nullable()
+    .default(null),
 });
 
 const themeOverlayAnchorSchema = z.enum([
@@ -162,7 +171,8 @@ export type ThemeExportFile = z.output<typeof themeExportFileSchema>;
 const floorplanSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
-  imageUrl: z.string(),
+  imageUrl: assetRefUrl.default(""),
+  level: finiteNumber.default(0),
 });
 
 const projectSchema = z
@@ -177,6 +187,13 @@ const projectSchema = z
     theme: themeSchema.default({}),
     floorplans: z.array(floorplanSchema).default([]),
     showMeasurements: z.boolean().default(true),
+    showFloorplan: z.boolean().default(true),
+    floorplanCorner: z
+      .enum(["top-left", "top-right", "bottom-left", "bottom-right"])
+      .default("bottom-left"),
+    floorplanOffset: z
+      .object({ x: finiteNumber, y: finiteNumber, unit: themeOverlayOffsetUnitSchema })
+      .default({ x: 20, y: 20, unit: "px" }),
   })
   .superRefine((project, ctx) => {
     const overlayIds = new Set<string>();
@@ -189,6 +206,18 @@ const projectSchema = z
         });
       }
       overlayIds.add(overlay.id);
+    });
+
+    const floorplanIds = new Set<string>();
+    project.floorplans.forEach((f, i) => {
+      if (floorplanIds.has(f.id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["floorplans", i, "id"],
+          message: `duplicate floorplan id "${f.id}"`,
+        });
+      }
+      floorplanIds.add(f.id);
     });
 
     const seen = new Set<string>();
@@ -230,6 +259,7 @@ const projectSchema = z
   // Dangling references are recoverable: drop them instead of rejecting the project.
   .transform((project) => {
     const sceneIds = new Set(project.scenes.map((s) => s.id));
+    const floorplanIds = new Set(project.floorplans.map((f) => f.id));
     return {
       ...project,
       initialSceneId:
@@ -242,6 +272,10 @@ const projectSchema = z
           ...h,
           targetSceneId: h.targetSceneId && sceneIds.has(h.targetSceneId) ? h.targetSceneId : null,
         })),
+        floorplanPosition:
+          scene.floorplanPosition && floorplanIds.has(scene.floorplanPosition.floorplanId)
+            ? scene.floorplanPosition
+            : null,
       })),
     };
   });
@@ -280,6 +314,14 @@ function migrateProject(raw: Record<string, unknown>): Record<string, unknown> {
   if (version < 2) {
     data = { ...data, schemaVersion: 2 };
     version = 2;
+  }
+
+  // v2 -> v3: floor plans gain `level`, scenes gain `floorplanPosition`, the
+  // project gains `showFloorplan`, `floorplanCorner` and `floorplanOffset`. All filled in by the
+  // schema defaults.
+  if (version < 3) {
+    data = { ...data, schemaVersion: 3 };
+    version = 3;
   }
 
   return data;
