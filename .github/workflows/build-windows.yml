@@ -26,6 +26,20 @@ jobs:
       - name: Build Frontend & Tauri App
         run: npm run tauri:build
 
+      - name: Prepare portable build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path portable | Out-Null
+          Copy-Item src-tauri/target/release/app.exe "portable/LibreTours 360.exe"
+
+      # GitHub always downloads artifacts as a zip: this one is the portable app,
+      # the next one the NSIS installer.
+      - name: Upload Windows Portable (zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: LibreTours-Studio-Windows-x64-portable
+          path: portable/
+
       - name: Upload Windows Standalone Binary
         uses: actions/upload-artifact@v4
         with:
