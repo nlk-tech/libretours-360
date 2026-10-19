@@ -1,26 +1,21 @@
-// Tauri build config — closely mirrors vite.config.ts but adds
-// clearScreen: false so Tauri CLI output remains visible.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+// Tauri build config: a plain client-side SPA (index.html -> src/main.tsx) written to
+// dist-tauri/, which tauri.conf.json bundles. The TanStack Start config in vite.config.ts
+// builds an SSR server into .output/ instead, which the desktop app cannot use.
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
+  base: "./",
+  clearScreen: false,
+  plugins: [react(), tailwindcss(), tsconfigPaths({ root: "." })],
+  server: {
+    port: 3000,
+    strictPort: true,
   },
-  vite: {
-    base: './',
-    clearScreen: false,
-    server: {
-      port: 3000,
-      strictPort: true,
-    },
-    resolve: {
-      tsconfigPaths: true,
-    },
+  build: {
+    outDir: "dist-tauri",
+    emptyOutDir: true,
   },
-  nitro: {
-    prerender: {
-      routes: ["/"],
-      crawlLinks: true,
-    },
-  } as any,
 });
