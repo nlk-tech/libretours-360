@@ -22,7 +22,7 @@ import type { MeasurePoint, Measurement, Scene } from "@/types/tour";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { greatCirclePoints, midpoint } from "@/lib/measure-geometry";
-import { Viewer } from "@photo-sphere-viewer/core";
+import { Viewer, type events } from "@photo-sphere-viewer/core";
 import { MarkersPlugin } from "@photo-sphere-viewer/markers-plugin";
 import "@photo-sphere-viewer/core/index.css";
 import "@photo-sphere-viewer/markers-plugin/index.css";
@@ -162,8 +162,8 @@ export function PanoCanvas({
   const tRef = useRef(t);
   tRef.current = t;
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<any | null>(null);
-  const markersRef = useRef<any | null>(null);
+  const viewerRef = useRef<Viewer | null>(null);
+  const markersRef = useRef<MarkersPlugin | null>(null);
   // Mappa che tiene traccia della posizione corrente di ogni marker in radianti
   const markerPositionsRef = useRef<Map<string, { yaw: number; pitch: number }>>(new Map());
   // refs to avoid stale closures in viewer event handlers
@@ -238,12 +238,6 @@ export function PanoCanvas({
 
     if (viewerRef.current) {
       try {
-        const existing = viewerRef.current.getPanorama?.();
-        if (existing === currentSceneUrl) return;
-      } catch (e) {
-        // ignore
-      }
-      try {
         viewerRef.current.destroy();
       } catch (e) {
         // ignore
@@ -301,10 +295,9 @@ export function PanoCanvas({
     };
     canvasEl?.addEventListener("webglcontextlost", onContextLost);
 
-    const onClick = (data: any) => {
-      const pitchRad =
-        data?.latitude ?? data?.pitch ?? data?.data?.latitude ?? data?.data?.pitch ?? 0;
-      const yawRad = data?.longitude ?? data?.yaw ?? data?.data?.longitude ?? data?.data?.yaw ?? 0;
+    const onClick = ({ data }: events.ClickEvent) => {
+      const pitchRad = data.pitch;
+      const yawRad = data.yaw;
 
       const pitch = (pitchRad * 180) / Math.PI;
       const yaw = (yawRad * 180) / Math.PI;
@@ -340,13 +333,13 @@ export function PanoCanvas({
 
     viewer.addEventListener("click", onClick);
 
-    const onZoom = (ev: any) => {
+    const onZoom = (ev: events.ZoomUpdatedEvent) => {
       // PSV v5's Viewer extends EventTarget, so this must be wired via
       // addEventListener — it has no .on()/.off() (that was the v4 API). The
       // ZoomUpdatedEvent fires every animation frame with the real zoomLevel
       // (0–100), whether triggered by wheel, pinch, buttons, or code, making
       // this the single source of truth for the `zoom` state driving the badge.
-      const psvLevel = ev?.zoomLevel ?? 50;
+      const psvLevel = ev.zoomLevel;
       setZoom(psvToMultiplier(psvLevel));
       setZoomPercent(Math.round(Math.min(100, Math.max(0, psvLevel))));
     };
@@ -430,9 +423,9 @@ export function PanoCanvas({
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    let markers = null;
+    let markers: MarkersPlugin | null = null;
     try {
-      markers = viewer.getPlugin(MarkersPlugin);
+      markers = viewer.getPlugin<MarkersPlugin>(MarkersPlugin);
     } catch (e) {
       console.log("getPlugin(MarkersPlugin) fallito", e);
     }
@@ -457,12 +450,13 @@ export function PanoCanvas({
     };
 
     const syncMarkers = () => {
-      if (!markersRef.current) return;
+      const markers = markersRef.current;
+      if (!markers) return;
 
       const hotspots = scene?.hotspots ?? [];
       const posMap = markerPositionsRef.current;
 
-      removeMarkersWhere(markersRef.current, (id) => !isMeasureMarkerId(id));
+      removeMarkersWhere(markers, (id) => !isMeasureMarkerId(id));
 
       hotspots.forEach((h) => {
         const pitchDeg = typeof h.pitch === "number" ? h.pitch : parseFloat(h.pitch || "0");
@@ -474,7 +468,7 @@ export function PanoCanvas({
         posMap.set(h.id, { yaw: yawRad, pitch: pitchRad });
 
         try {
-          markersRef.current.addMarker({
+          markers.addMarker({
             id: h.id,
             position: { yaw: yawRad, pitch: pitchRad },
             size: { width: 36, height: 36 },
@@ -493,44 +487,6 @@ export function PanoCanvas({
       });
     };
 
-    const onSelectMarker = (e: any) => {
-      const markerId = e?.marker?.id ?? e?.id ?? null;
-      if (!markerId) return;
-      // Usa sceneRef per evitare stale closure
-      const currentScene = sceneRef.current;
-      if (!currentScene) return;
-      const hs = currentScene.hotspots.find((h) => h.id === markerId) ?? null;
-      if (!hs) return;
-
-      if (modeRef.current === "editor") {
-        onSelectHotspot(markerId);
-        return;
-      }
-
-      // Preview mode
-      if (hs.type === "info") {
-        // Info marker: show popup with Markdown content
-        if (hs.content) {
-          setInfoPopup({
-            title: hs.tooltip || tRef.current("editor.viewer.info"),
-            content: hs.content,
-          });
-        } else {
-          setToast(hs.tooltip || tRef.current("editor.viewer.noInformation"));
-          window.setTimeout(() => setToast(null), 2600);
-        }
-        return;
-      }
-
-      // Navigation markers (door, arrow)
-      if (hs.targetSceneId) {
-        onNavigate(hs.targetSceneId);
-        return;
-      }
-      setToast(hs.tooltip || tRef.current("editor.viewer.noInformation"));
-      window.setTimeout(() => setToast(null), 2600);
-    };
-
     // Sincronizza i marker dopo un breve ritardo per assicurare che il panorama sia caricato
     const initialSyncTimer = window.setTimeout(() => {
       syncMarkers();
@@ -540,10 +496,10 @@ export function PanoCanvas({
         try {
           const allMarkers = markersRef.current.getMarkers?.();
           if (allMarkers) {
-            allMarkers.forEach((m: any) => {
+            allMarkers.forEach((m) => {
               // Measurement markers handle their own interactions (effect 3).
               if (!m.data?.hotspotId) return;
-              const el = m.element as HTMLElement | undefined;
+              const el = m.domElement as HTMLElement | null;
               if (!el) return;
 
               if (modeRef.current === "editor") {
@@ -563,7 +519,9 @@ export function PanoCanvas({
                   // Disabilita la rotazione della camera durante il drag
                   try {
                     viewer.setOption("mousemove", false);
-                  } catch (_) {}
+                  } catch {
+                    // ignore
+                  }
 
                   // Leggi posizione corrente dalla mappa (ref, sempre aggiornata)
                   const saved = markerPositionsRef.current.get(m.id);
@@ -594,11 +552,7 @@ export function PanoCanvas({
                     if (!viewer) return;
 
                     // 1. Recupera il FOV verticale REALE corrente di PSV v5 (in radianti)
-                    let vFovRad = Math.PI / 3; // Fallback ~60°
-                    try {
-                      const defaultFovDeg = viewer.getOption?.("defaultFov") ?? 60;
-                      vFovRad = viewer.state?.vFov ?? (defaultFovDeg * Math.PI) / 180;
-                    } catch (_) {}
+                    const vFovRad = viewer.state?.vFov ?? Math.PI / 3; // Fallback ~60°
 
                     // 2. Calcolo trigonomerico dell'angolo di spostamento esatto
                     const halfH = containerHeight / 2;
@@ -637,7 +591,9 @@ export function PanoCanvas({
                     // Riabilita la rotazione della camera
                     try {
                       viewer.setOption("mousemove", true);
-                    } catch (_) {}
+                    } catch {
+                      // ignore
+                    }
 
                     if (
                       dragState.markerId &&
@@ -715,26 +671,11 @@ export function PanoCanvas({
         }
       }
     }, 500);
-    viewer.on?.("panorama-loaded", syncMarkers);
-
-    try {
-      markersRef.current?.on?.("select-marker", onSelectMarker);
-      markersRef.current?.on?.("click-marker", onSelectMarker);
-    } catch (e) {
-      // ignore
-    }
 
     return () => {
       window.clearTimeout(initialSyncTimer);
       dragState.dragging = false;
       dragState.markerId = null;
-      try {
-        markersRef.current?.off?.("select-marker", onSelectMarker);
-        markersRef.current?.off?.("click-marker", onSelectMarker);
-        viewer.off?.("panorama-loaded", syncMarkers);
-      } catch (e) {
-        // ignore
-      }
       removeMarkersWhere(markersRef.current, (id) => !isMeasureMarkerId(id));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
