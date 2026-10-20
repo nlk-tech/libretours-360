@@ -288,14 +288,6 @@ export function PanoCanvas({
       return;
     }
 
-    try {
-      if (viewer.isAutorotateEnabled?.()) {
-        viewer.stopAutorotate?.();
-      }
-    } catch (e) {
-      // ignore
-    }
-
     viewerRef.current = viewer;
 
     // Some WebView2/Windows setups (VMs, remote desktop, blocked GPU) create a
@@ -386,7 +378,7 @@ export function PanoCanvas({
         viewer.needsUpdate?.();
       } catch (e) {
         try {
-          viewer.resize?.();
+          viewer.autoSize();
         } catch (er) {
           // ignore
         }
