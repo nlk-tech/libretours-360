@@ -8,3 +8,4 @@ Proposte di funzionalità non ancora implementate, da rivedere prima di iniziare
 | 02 | [Planimetrie multi-piano con posizione e direzione](02-planimetrie.md) | Implementato, vedi [docs/floorplans.md](../floorplans.md); resta un TODO |
 | 03 | [Deploy della versione web (Docker / Uniform Server)](03-deploy-web.md) | Da rivedere |
 | 04 | [Traduzioni dell'export Web 3D](04-i18n-export.md) | Da rivedere |
+| 05 | [Misure stimate dalla foto, calibrate su una misura nota](05-misure-stimate.md) | Da valutare: prima la verifica sui dati veri |
