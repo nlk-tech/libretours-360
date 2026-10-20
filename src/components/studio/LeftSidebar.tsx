@@ -8,11 +8,14 @@ import {
   Download,
   GripVertical,
   Image as ImageIcon,
+  Info,
   Layers,
   Map,
+  MapPin,
   Palette,
   Pencil,
   Plus,
+  Ruler,
   Star,
   Trash2,
   Type,
@@ -72,6 +75,47 @@ interface Props {
   onImportThemeFile: (file: File) => void;
   /** Content of the Floorplans tab (see FloorplansPanel). */
   floorplansPanel: ReactNode;
+}
+
+/** Per-scene icons with counts: navigation hotspots, info points, measurements. */
+function SceneContentBadges({ scene, isInitial }: { scene: Scene; isInitial: boolean }) {
+  const { t } = useTranslation();
+  const infoCount = scene.hotspots.filter((h) => h.type === "info").length;
+  const badges = [
+    {
+      key: "nav",
+      Icon: MapPin,
+      count: scene.hotspots.length - infoCount,
+      label: "editor.sidebar.navHotspotsCount",
+    },
+    { key: "info", Icon: Info, count: infoCount, label: "editor.sidebar.infoHotspotsCount" },
+    {
+      key: "measure",
+      Icon: Ruler,
+      count: scene.measurements.length,
+      label: "editor.sidebar.measurementsCount",
+    },
+  ].filter((b) => b.count > 0);
+
+  return (
+    <div className="flex h-4 items-center gap-2 text-[10px] text-muted-foreground">
+      {badges.map(({ key, Icon, count, label }) => {
+        const text = t(label, { count });
+        return (
+          <span key={key} className="flex items-center gap-0.5" title={text} aria-label={text}>
+            <Icon className="h-3 w-3" aria-hidden />
+            {count}
+          </span>
+        );
+      })}
+      {isInitial && (
+        <span>
+          {badges.length > 0 && "· "}
+          {t("editor.sidebar.startBadge")}
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function LeftSidebar({
@@ -269,10 +313,7 @@ export function LeftSidebar({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium">{scene.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {t("editor.sidebar.hotspotsCount", { count: scene.hotspots.length })}
-                      {scene.id === initialSceneId ? ` · ${t("editor.sidebar.startBadge")}` : ""}
-                    </p>
+                    <SceneContentBadges scene={scene} isInitial={scene.id === initialSceneId} />
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <Button
