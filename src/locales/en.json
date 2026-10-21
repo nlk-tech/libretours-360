@@ -318,6 +318,8 @@
       "onlyImagesSupported": "Only JPG, PNG or WebP panoramas are supported.",
       "fileDialogFailed": "Could not open the file dialog",
       "importPanoramasFailed": "Could not add the panoramas",
+      "importingPanoramas": "Importing panoramas...",
+      "importingProgress": "Importing \"{{name}}\" ({{current}}/{{total}})...",
       "logoUploadFailed": "Could not upload the logo",
       "scenesAdded_one": "{{count}} scene added",
       "scenesAdded_other": "{{count}} scenes added",

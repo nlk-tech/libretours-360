@@ -49,6 +49,7 @@ import {
   importPanoramaPaths,
   pickPanoramaPaths,
   type ImportedPanorama,
+  type ImportProgress,
 } from "@/lib/panorama-import";
 import { exportWeb3D } from "@/lib/export";
 import { exportCubemapStandalone } from "@/lib/cubemap";
@@ -493,21 +494,32 @@ function Studio() {
 
   /** Adds one scene per imported panorama and tells the user what happened. */
   const addImportedScenes = async (
-    importer: (projectId: string) => Promise<ImportedPanorama[]>,
+    importer: (projectId: string, onProgress: ImportProgress) => Promise<ImportedPanorama[]>,
   ) => {
     const projectId = projectRef.current?.id;
     if (!projectId) return;
+    // Large panoramas take a while each: keep a visible progress toast so a
+    // long import is never mistaken for one that silently did nothing.
+    const toastId = toast.loading(t("editor.toasts.importingPanoramas"));
     let imported: ImportedPanorama[];
     try {
-      imported = await importer(projectId);
+      imported = await importer(projectId, (current, total, name) =>
+        toast.loading(t("editor.toasts.importingProgress", { name, current, total }), {
+          id: toastId,
+        }),
+      );
     } catch (e) {
       console.error("Could not import panoramas", e);
       toast.error(t("editor.toasts.importPanoramasFailed"), {
+        id: toastId,
         description: describeStorageError(e),
       });
       return;
     }
-    if (!imported.length) return;
+    if (!imported.length) {
+      toast.dismiss(toastId);
+      return;
+    }
 
     const newScenes: Scene[] = imported.map((p) => ({
       id: uid("scene"),
@@ -526,7 +538,7 @@ function Studio() {
       initialSceneId: draft.initialSceneId ?? newScenes[0]!.id,
     }));
     setActiveSceneId((prev) => prev ?? newScenes[0]!.id);
-    toast.success(t("editor.toasts.scenesAdded", { count: newScenes.length }));
+    toast.success(t("editor.toasts.scenesAdded", { count: newScenes.length }), { id: toastId });
     if (imported.some((p) => p.thumbnailFailed)) {
       toast.warning(t("editor.toasts.previewsFailed"), {
         description: t("editor.toasts.previewsFailedHint"),
@@ -541,7 +553,9 @@ function Studio() {
       toast.error(t("editor.toasts.onlyImagesSupported"));
       return;
     }
-    await addImportedScenes((projectId) => importPanoramaFiles(projectId, images));
+    await addImportedScenes((projectId, onProgress) =>
+      importPanoramaFiles(projectId, images, onProgress),
+    );
   };
 
   /** Stores the picked logo image locally and points theme.logoUrl at it; the old one is dropped. */
@@ -890,7 +904,14 @@ function Studio() {
       return;
     }
     if (!paths?.length) return; // cancelled
-    await addImportedScenes((projectId) => importPanoramaPaths(projectId, paths));
+    await handlePanoramaPaths(paths);
+  };
+
+  /** Tauri: paths from the native dialog or dropped onto the window, copied natively. */
+  const handlePanoramaPaths = async (paths: string[]) => {
+    await addImportedScenes((projectId, onProgress) =>
+      importPanoramaPaths(projectId, paths, onProgress),
+    );
   };
 
   const handleDeleteScene = async (sceneId: string) => {
@@ -1135,6 +1156,7 @@ function Studio() {
           onSetInitialScene={handleSetInitialScene}
           onFiles={handleFiles}
           onPickNative={handlePickPanoramas}
+          onDropPaths={handlePanoramaPaths}
           onThemeChange={(patch: Partial<Theme>) =>
             update((draft) => ({ ...draft, theme: { ...draft.theme, ...patch } }))
           }

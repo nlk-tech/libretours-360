@@ -652,6 +652,30 @@ const nativeImport: NativeImport = {
     }
   },
   copyIntoProject: copyPanoramaFromPath,
+  async listenFileDrop(handler) {
+    const { getCurrentWebview } = await import("@tauri-apps/api/webview");
+    // Tauri reports physical pixels; the DOM works in CSS pixels.
+    return await getCurrentWebview().onDragDropEvent(({ payload }) => {
+      const ratio = window.devicePixelRatio || 1;
+      switch (payload.type) {
+        case "enter":
+        case "over":
+          handler({ type: "over", x: payload.position.x / ratio, y: payload.position.y / ratio });
+          break;
+        case "drop":
+          handler({
+            type: "drop",
+            x: payload.position.x / ratio,
+            y: payload.position.y / ratio,
+            paths: payload.paths,
+          });
+          break;
+        case "leave":
+          handler({ type: "leave" });
+          break;
+      }
+    });
+  },
 };
 
 // ─── The StorageProvider ───────────────────────────────────────────────────

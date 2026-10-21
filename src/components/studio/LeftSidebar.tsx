@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BookmarkPlus,
@@ -29,7 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { hasNativeImport } from "@/lib/panorama-import";
+import { hasNativeImport, listenPanoramaDrop } from "@/lib/panorama-import";
 import { isBuiltInThemePreset } from "@/lib/theme-store";
 
 /** Formats accepted by the logo/overlay image picker. */
@@ -61,6 +61,8 @@ interface Props {
   onFiles: (files: FileList | File[]) => void;
   /** Tauri: open the native file dialog (files are copied natively, not read into memory). */
   onPickNative: () => void;
+  /** Tauri: files dropped from the OS onto the drop zone (paths, copied natively). */
+  onDropPaths: (paths: string[]) => void;
   onThemeChange: (patch: Partial<Theme>) => void;
   /** A logo image was picked (drag & drop or the file input); stores it and updates theme.logoUrl. */
   onLogoFileSelected: (file: File) => void;
@@ -138,6 +140,7 @@ export function LeftSidebar({
   onSetInitialScene,
   onFiles,
   onPickNative,
+  onDropPaths,
   onThemeChange,
   onLogoFileSelected,
   onLogoRemove,
@@ -153,6 +156,9 @@ export function LeftSidebar({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const onDropPathsRef = useRef(onDropPaths);
+  onDropPathsRef.current = onDropPaths;
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [logoDragOver, setLogoDragOver] = useState(false);
   const importThemeInputRef = useRef<HTMLInputElement>(null);
@@ -170,6 +176,40 @@ export function LeftSidebar({
       const rect = sceneRowRefs.current[s.id]?.getBoundingClientRect();
       return rect ? clientY > rect.top + rect.height / 2 : false;
     }).length;
+
+  // The desktop webview swallows HTML5 drops of OS files (the onDrop handler
+  // below never fires there): listen to the native drop event instead and
+  // hit-test the drop zone ourselves.
+  useEffect(() => {
+    if (!hasNativeImport()) return;
+    const isOverZone = (x: number, y: number) => {
+      const rect = dropZoneRef.current?.getBoundingClientRect();
+      return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    };
+    let unlisten: (() => void) | null = null;
+    let disposed = false;
+    listenPanoramaDrop((event) => {
+      if (event.type === "leave") {
+        setDragOver(false);
+      } else if (event.type === "over") {
+        setDragOver(isOverZone(event.x, event.y));
+      } else {
+        setDragOver(false);
+        if (isOverZone(event.x, event.y) && event.paths.length) {
+          onDropPathsRef.current(event.paths);
+        }
+      }
+    })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlisten = fn;
+      })
+      .catch((e) => console.warn("Could not listen to file drops", e));
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
 
   const builtInPresets = themePresets.filter((p) => isBuiltInThemePreset(p.id));
   const savedPresets = themePresets.filter((p) => !isBuiltInThemePreset(p.id));
@@ -201,6 +241,7 @@ export function LeftSidebar({
 
         <TabsContent value="scenes" className="m-0 min-h-0 flex-1 overflow-y-auto p-3">
           <div
+            ref={dropZoneRef}
             onDragOver={(e) => {
               e.preventDefault();
               setDragOver(true);

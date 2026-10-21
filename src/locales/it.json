@@ -318,6 +318,8 @@
       "onlyImagesSupported": "Sono supportate solo panoramiche JPG, PNG o WebP.",
       "fileDialogFailed": "Impossibile aprire la finestra di selezione file",
       "importPanoramasFailed": "Impossibile aggiungere le panoramiche",
+      "importingPanoramas": "Importazione delle panoramiche...",
+      "importingProgress": "Importazione di \"{{name}}\" ({{current}}/{{total}})...",
       "logoUploadFailed": "Impossibile caricare il logo",
       "scenesAdded_one": "{{count}} scena aggiunta",
       "scenesAdded_other": "{{count}} scene aggiunte",

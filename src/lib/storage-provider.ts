@@ -32,7 +32,19 @@ export interface NativeImport {
    * without the image passing through the WebView.
    */
   copyIntoProject(projectId: string, srcPath: string, keyWithExt: string): Promise<void>;
+  /**
+   * Listens to files dragged from the OS onto the window. The desktop webview
+   * swallows HTML5 drag & drop of files, so this is the only way to receive
+   * them there. Positions are in CSS pixels, relative to the viewport.
+   * Resolves with the function that stops listening.
+   */
+  listenFileDrop(handler: (event: FileDropEvent) => void): Promise<() => void>;
 }
+
+export type FileDropEvent =
+  | { type: "over"; x: number; y: number }
+  | { type: "drop"; x: number; y: number; paths: string[] }
+  | { type: "leave" };
 
 export interface StorageProvider {
   readonly kind: "tauri" | "web";
