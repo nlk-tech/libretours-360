@@ -334,7 +334,7 @@ Contributions are welcome! Here's how you can help:
 
 ## Acknowledgements
 
-The project was bootstrapped with [Lovable](https://lovable.dev); it no longer depends on Lovable's build tooling or services.
+LibreTours 360 started out as a [Lovable](https://lovable.dev) project. It is now fully independent: it no longer uses Lovable's build tooling, libraries or services, and it is developed and built with standard open-source tools only.
 
 ---
 
