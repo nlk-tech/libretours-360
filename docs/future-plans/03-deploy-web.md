@@ -32,17 +32,7 @@ Le stime vengono solo dalla lettura della configurazione: nessuna build o prova 
      RewriteCond %{REQUEST_FILENAME} !-d
      RewriteRule ^ index.html [L]
      ```
-3. **`base: './'` in `vite.config.ts`.**
-   - Con percorsi relativi, ricaricando `/editor/abc` il browser cerca `/editor/assets/...`; con il fallback riceve HTML al posto del JS e l'app si rompe.
-   - Il `./` serve probabilmente per Tauri e per gli export. Per il web serve `base: '/'`, ad esempio:
-     - un `vite.web.config.ts`;
-     - oppure una variabile d'ambiente letta nel config;
-     - oppure `<base href="/">` nell'HTML.
-   - Va verificato il ricaricamento delle pagine dell'editor.
-4. **Build target.**
-   - `@lovable.dev/vite-tanstack-config` usa nitro con target Cloudflare di default, più il prerender di `/`.
-   - Verificare quale output è il bundle statico corretto (l'attuale `dist/` contiene `index.html` + `assets/`).
-   - Eventualmente impostare un preset nitro statico.
+3. ~~**Base path e build target.**~~ Risolti con l'uscita da Lovable (vedi sotto): `npm run build` produce in `dist/` una SPA statica (`index.html` + `assets/`) con `base: '/'`; Tauri usa `--mode tauri` con `base: './'`.
 5. **HTTPS.**
    - Su Internet sempre dietro HTTPS: reverse proxy come Caddy o Traefik, oppure certificato su nginx.
    - In LAN va bene anche HTTP. Verificare che non servano API disponibili solo in contesto sicuro (es. `crypto.subtle`, che però funziona anche su `localhost`).
@@ -50,55 +40,12 @@ Le stime vengono solo dalla lettura della configurazione: nessuna build o prova 
    - `assets/*` hashati: `Cache-Control: immutable`.
    - `index.html`: `no-cache`.
 
-## Sottopunto: affrancarsi da Lovable
-Prerequisito consigliato per il deploy, perché risolve alla radice i punti 3 e 4.
-
-### Cosa c'è oggi
-- **`@lovable.dev/vite-tanstack-config`** (devDependency) è l'unico vincolo vero. `vite.config.ts` e `vite.tauri.config.ts` chiamano solo il suo `defineConfig`, che attiva in modo implicito questi plugin:
-  - TanStack Start;
-  - React e Tailwind;
-  - tsconfig paths e alias `@`;
-  - dedupe React/TanStack;
-  - iniezione delle variabili `VITE_*`;
-  - devtools;
-  - error logger;
-  - detection sandbox;
-  - **nitro** con target Cloudflare di default.
-- **`src/lib/lovable-error-reporting.ts`** (usato in `src/routes/__root.tsx`) inoltra gli errori all'editor Lovable. Fuori da Lovable è un no-op (`window.__lovableEvents?.`).
-- **`src/server.ts`** è il wrapper SSR per gli errori h3/nitro. Non serve più se si elimina l'SSR.
-- Il resto è standard: React, TanStack Router/Start, Vite, Photo Sphere Viewer, Tauri.
-
-### Approccio
-L'app non usa funzionalità server: niente server functions, niente API, storage in IndexedDB oppure filesystem Tauri. Due strade:
-
-1. **TanStack Start in modalità SPA/statica.**
-   - Si tiene il framework attuale e il `vite.config.ts` diventa esplicito: `tanstackStart({ spa: ... })`, `viteReact()`, `tailwindcss()`, alias.
-   - Output statico `index.html` + `assets/`.
-2. **Vite + TanStack Router puro, senza Start** (preferibile se fattibile).
-   - È il setup più semplice ed elimina l'SSR, quindi anche il compromesso di idratazione con `lng:"en"` (vedi memoria i18n), `src/server.ts` e nitro.
-   - Richiede `index.html` con entry `main.tsx` e il plugin `@tanstack/router-plugin` per il routing a file.
-
-### Passi
-1. Leggere `node_modules/@lovable.dev/vite-tanstack-config/dist` per elencare esattamente plugin e opzioni da replicare.
-2. Scrivere `vite.config.ts` espliciti:
-   - web con `base: '/'`;
-   - Tauri e export con `base: './'` (già presente).
-   - Rimuovere la dipendenza Lovable, `lovable-error-reporting.ts` e il suo uso in `__root.tsx`.
-3. Se si sceglie l'opzione 2:
-   - rimuovere `@tanstack/react-start`, `nitro` e `src/server.ts`;
-   - adattare `__root.tsx` (shell HTML → `index.html`) e l'inizializzazione i18n.
-4. Aggiornare gli script in `package.json`: `build`, `build:web`, `tauri:build`.
-
-### Stima
-Mezza giornata o una giornata, incluse le verifiche.
-
-### Verifica
-- `npm run build`: l'output è statico e servibile da nginx/Apache.
-- `npm run tauri:build` e l'app desktop funzionano.
-- `npm test` passa.
-- L'export 3D e cubemap funziona.
-- Il reload sulle route `/editor/$id` funziona.
-- Il cambio lingua funziona senza flash.
+## Sottopunto: affrancarsi da Lovable — fatto (branch `free-willy`)
+- Rimossi `@lovable.dev/vite-tanstack-config`, TanStack Start, nitro, `src/server.ts`, `src/start.ts`, il reporting errori verso l'editor Lovable, `bun.lock` (puntava al registry privato di Lovable) e `bunfig.toml`.
+- Un solo `vite.config.ts` esplicito (router plugin, React, Tailwind) per web e desktop; `src/main.tsx` è l'entry di entrambi.
+- Senza SSR l'i18n parte subito nella lingua rilevata: niente più primo render forzato in inglese.
+- Prova headless sulla build web servita da `vite preview`: home, CSS, lingua italiana al primo render, click, reload diretto su `/editor/<id>`, nessun errore in console.
+- Resta da fare: togliere i componenti shadcn/ui e i pacchetti del kit di partenza che l'app non usa.
 
 ## Bozza Docker
 ```dockerfile
@@ -107,10 +54,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build   # eventualmente con config web (base '/')
+RUN npm run build
 
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html   # verificare la dir di output
+COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```

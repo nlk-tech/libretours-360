@@ -5,7 +5,7 @@
 
 LibreTours 360 is a local-first virtual tour editor. Drop in your 360° panoramas, link scenes together with clickable hotspots, brand the tour with a theme, preview the result with smooth equirectangular navigation, and export a standalone viewer for sharing.
 
-Built with [TanStack Start](https://tanstack.com/router/latest/docs/framework/react/start/overview), [React](https://react.dev), [Photo Sphere Viewer](https://photo-sphere-viewer.js.org/), and [Tauri](https://v2.tauri.app/).
+Built with [React](https://react.dev), [Photo Sphere Viewer](https://photo-sphere-viewer.js.org/), and [Tauri](https://v2.tauri.app/).
 
 > This project is the result of **vibe coding** — an experimental approach where the developer describes features in natural language and an AI agent translates them into working code. Every line you see here was generated through iterative prompts, not typed by hand.
 
@@ -40,7 +40,7 @@ Built with [TanStack Start](https://tanstack.com/router/latest/docs/framework/re
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | [TanStack Start](https://tanstack.com/router/latest/docs/framework/react/start/overview) (SSR + SPA) |
+| Framework | Client-side SPA (no server rendering) |
 | UI Library | [React 19](https://react.dev) |
 | Styling | [Tailwind CSS 4](https://tailwindcss.com) + [Radix UI](https://www.radix-ui.com/) primitives |
 | Panorama Engine | [Photo Sphere Viewer 5](https://photo-sphere-viewer.js.org/) + [Markers Plugin](https://photo-sphere-viewer.js.org/plugins/markers) |
@@ -92,7 +92,7 @@ npm run build
 npm run preview
 ```
 
-> **Note:** In the browser, projects are stored in IndexedDB — i.e. in each user's own browser, not on the server. Clearing the browser's site data deletes them: export a `.ltproj` package to keep a copy. Deploying the web version to a static server (Docker/nginx, Apache) is not yet verified end-to-end: see the [web deploy plan](docs/future-plans/03-deploy-web.md) for the open points (SPA fallback, asset base path, build target).
+> **Note:** In the browser, projects are stored in IndexedDB — i.e. in each user's own browser, not on the server. Clearing the browser's site data deletes them: export a `.ltproj` package to keep a copy. `dist/` is a static SPA with absolute asset paths: the server must fall back to `index.html` for unknown paths so that deep links like `/editor/<id>` survive a reload (`npm run preview` already does). Deploying it with Docker/nginx or Apache is not yet verified end-to-end: see the [web deploy plan](docs/future-plans/03-deploy-web.md).
 
 ---
 
@@ -122,7 +122,7 @@ npm run tauri:dev
 
 This starts the Vite dev server and opens a native window with live-reload.
 
-> **Note:** When running inside Tauri, the app uses hash-based routing (`#/`) for compatibility with the `tauri://` protocol. The `vite.tauri.config.ts` configuration is used exclusively for the desktop build to output a clean SPA bundle to `dist/`.
+> **Note:** When running inside Tauri, the app uses hash-based routing (`#/`) for compatibility with the `tauri://` protocol. Tauri builds the same SPA with `vite build --mode tauri`, which uses relative asset paths and writes to `dist-tauri/`.
 
 ---
 
@@ -266,13 +266,10 @@ src/
 │   └── editor.$id.tsx              # Tour editor page
 ├── types/
 │   └── tour.ts                     # TourProject type definitions
-├── main.tsx                        # SPA entry point (desktop build)
-├── router.tsx                      # Router with hash history for Tauri
-├── server.ts                       # SSR error boundary (web build)
-└── start.ts                        # TanStack Start configuration
+├── main.tsx                        # SPA entry point (web and desktop)
+└── router.tsx                      # Router with hash history for Tauri
 docs/future-plans/                  # Roadmap: planned features, to be reviewed before implementation
-vite.config.ts                      # Web build configuration
-vite.tauri.config.ts                # Desktop (Tauri) build configuration
+vite.config.ts                      # Build configuration (web; desktop with --mode tauri)
 src-tauri/                          # Tauri Rust backend
 ```
 
@@ -309,7 +306,7 @@ Each hotspot has a **type** (`door` and `arrow` for navigation to a target scene
 
 Planned features are described in [`docs/future-plans/`](docs/future-plans/README.md), including:
 
-- Web deploy (Docker / Apache) and removal of the Lovable build wrapper
+- Web deploy (Docker / Apache)
 - Localization of the Web 3D export viewer
 
 ---
@@ -331,6 +328,12 @@ Contributions are welcome! Here's how you can help:
 - Follow the existing component patterns (Radix UI primitives, Tailwind classes, `cn()` utility).
 - **No hardcoded UI strings** — add new strings to every dictionary in `src/locales/`.
 - Run `npm test` and test all export formats (Web 3D, Standalone 3D, `.ltproj`, JSON) when making changes to the viewer or data pipeline.
+
+---
+
+## Acknowledgements
+
+The project was bootstrapped with [Lovable](https://lovable.dev); it no longer depends on Lovable's build tooling or services.
 
 ---
 

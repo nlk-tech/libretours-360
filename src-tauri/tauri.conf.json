@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.libretours.studio",
   "build": {
-    "beforeBuildCommand": "npx vite build --config vite.tauri.config.ts",
-    "beforeDevCommand": "npx vite --config vite.tauri.config.ts",
+    "beforeBuildCommand": "npx vite build --mode tauri",
+    "beforeDevCommand": "npx vite --mode tauri",
     "devUrl": "http://localhost:3000",
     "frontendDist": "../dist-tauri"
   },

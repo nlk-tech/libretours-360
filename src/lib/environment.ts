@@ -14,8 +14,7 @@ export function isTauri(): boolean {
 }
 
 /**
- * Returns `true` when the current runtime is a standard browser
- * (including SSR / server-side rendering).
+ * Returns `true` when the current runtime is a standard browser.
  */
 export function isBrowser(): boolean {
   return !isTauri();

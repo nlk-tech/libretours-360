@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
+import "./styles.css";
 import { getRouter } from "./router";
 import { getStorageProvider } from "./lib/storage-provider";
 import { describeStorageError, reportStorageIssue } from "./lib/storage-errors";

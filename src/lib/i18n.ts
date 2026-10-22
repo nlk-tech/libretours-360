@@ -14,39 +14,31 @@ const DETECTION_OPTIONS = {
 };
 
 // A standalone detector, deliberately not registered on the i18next instance via `.use()`:
-// i18next always inits with `lng: "en"` below (so SSR and the client's first render match
-// exactly, see applyDetectedLanguage), and a registered detector would cache that "en" back
-// to localStorage as a side effect of init, clobbering whatever language the user had chosen.
-// Client-only: it reads localStorage/navigator, neither of which exist during SSR.
+// a registered detector caches whatever language init resolves back to localStorage, so the
+// saved choice is written only by changeLanguage(), when the user actually picks one.
+// Guarded for Node, where the unit tests import this module without localStorage/navigator.
 const detector = typeof window !== "undefined" ? new LanguageDetector() : null;
 detector?.init(undefined, DETECTION_OPTIONS);
 
-void i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      en: { translation: en },
-      it: { translation: it },
-    },
-    fallbackLng: "en",
-    // Both SSR and the client's first render must produce identical markup, or React
-    // throws a hydration mismatch and discards the server-rendered tree. So the very
-    // first render is always English everywhere; applyDetectedLanguage() switches to
-    // the real language right after the client mounts (an ordinary post-mount update).
-    lng: "en",
-    supportedLngs: SUPPORTED_LANGUAGES,
-    nonExplicitSupportedLngs: true,
-    interpolation: { escapeValue: false },
-    react: { useSuspense: false },
-  });
-
-/** Client-only: switches to the saved/browser-detected language once, right after mount. */
-export function applyDetectedLanguage(): void {
-  if (!detector) return;
-  const detected = detector.detect();
-  const lang = Array.isArray(detected) ? detected[0] : detected;
-  if (lang && lang !== i18n.language) changeLanguage(lang);
+function detectLanguage(): string {
+  const detected = detector?.detect();
+  return (Array.isArray(detected) ? detected[0] : detected) ?? "en";
 }
+
+void i18n.use(initReactI18next).init({
+  resources: {
+    en: { translation: en },
+    it: { translation: it },
+  },
+  fallbackLng: "en",
+  // The app is a client-only SPA, so the first render can already use the saved or
+  // browser language; unsupported ones fall back to English.
+  lng: detectLanguage(),
+  supportedLngs: SUPPORTED_LANGUAGES,
+  nonExplicitSupportedLngs: true,
+  interpolation: { escapeValue: false },
+  react: { useSuspense: false },
+});
 
 /** Changes the active language and persists the choice; the LanguageSwitcher uses this. */
 export function changeLanguage(lang: string): void {

@@ -5,17 +5,14 @@ import {
   createRootRouteWithContext,
   useRouter,
   HeadContent,
-  Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { subscribeStorageIssues } from "../lib/storage-errors";
-import i18n, { applyDetectedLanguage } from "@/lib/i18n";
+import i18n from "@/lib/i18n";
 
 /** Shows storage problems (corrupted/restored projects, ...) as toasts. */
 function StorageIssueToasts() {
@@ -55,9 +52,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   const { t } = useTranslation();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -91,8 +85,6 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "LibreTours 360 - Studio" },
       {
         name: "description",
@@ -106,71 +98,32 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
 
-function RootShell({ children }: { children: ReactNode }) {
-  // The desktop SPA (main.tsx) mounts into index.html's <div id="root">, which already has
-  // <html>/<body>: rendering them again inside the div makes React 19 loop forever while
-  // dispatching the first click, freezing the window. SSR hydrates the whole document instead.
-  if (typeof document !== "undefined" && document.getElementById("root")) {
-    return (
-      <>
-        <HeadContent />
-        {children}
-      </>
-    );
-  }
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  // Both SSR and the first client render always use English (see lib/i18n.ts), so the
-  // hydrated tree matches the server exactly; the real language is applied right after,
-  // as an ordinary post-mount update. <html lang> then tracks it going forward.
+  // <html lang> tracks the active language (set at start-up by lib/i18n.ts).
   useEffect(() => {
     const applyLang = () => {
       document.documentElement.lang = i18n.language;
     };
     applyLang();
     i18n.on("languageChanged", applyLang);
-    // React can still be selectively hydrating other subtrees (e.g. inside portals)
-    // when this effect fires; switching the language mid-hydration would diff against
-    // markup React hasn't reconciled yet. A macrotask defers it until hydration settles.
-    const timer = setTimeout(applyDetectedLanguage, 0);
     return () => {
-      clearTimeout(timer);
       i18n.off("languageChanged", applyLang);
     };
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
+      {/* Title and meta from the routes' head(); React 19 hoists them into <head>. */}
+      <HeadContent />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster theme="dark" />
