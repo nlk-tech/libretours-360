@@ -115,12 +115,14 @@
         "dragDropImage": "Drag & drop an image here, or click to browse",
         "supportedFormats": "PNG, SVG, JPG or WebP",
         "logoPreview": "Logo preview",
+        "logoSize": "Logo size",
         "logoUrlHint": "The image is stored inside the project: no external URL or network connection is needed in the exported viewer."
       },
       "floorplans": {
         "title": "Floor plans",
         "hint": "Upload one plan per floor, then place each scene on it and set where it looks.",
         "add": "Add floor plan",
+        "dropHint": "Drop floor plans here",
         "untitled": "Untitled floor",
         "name": "Floor name",
         "level": "Level",

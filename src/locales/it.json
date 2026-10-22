@@ -115,12 +115,14 @@
         "dragDropImage": "Trascina un'immagine qui o fai clic per selezionarla",
         "supportedFormats": "PNG, SVG, JPG o WebP",
         "logoPreview": "Anteprima del logo",
+        "logoSize": "Dimensione del logo",
         "logoUrlHint": "L'immagine viene salvata nel progetto: nessun URL esterno o connessione di rete è richiesta nel viewer esportato."
       },
       "floorplans": {
         "title": "Planimetrie",
         "hint": "Carica una planimetria per ogni piano, poi posiziona ogni scena e indica dove guarda.",
         "add": "Aggiungi planimetria",
+        "dropHint": "Trascina qui le planimetrie",
         "untitled": "Piano senza nome",
         "name": "Nome del piano",
         "level": "Livello",

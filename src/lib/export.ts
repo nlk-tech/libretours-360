@@ -1,4 +1,10 @@
-import { DEFAULT_FLOORPLAN_OFFSET, type Theme, type TourProject } from "@/types/tour";
+import {
+  DEFAULT_FLOORPLAN_OFFSET,
+  LOGO_HEIGHT_DEFAULT,
+  LOGO_MAX_ASPECT,
+  type Theme,
+  type TourProject,
+} from "@/types/tour";
 import { getBlob, isLocalAssetRef } from "./assets";
 import { openExportSink, type ExportResult, type ExportSink } from "./export-sink";
 import { saveFile } from "./save-file";
@@ -209,6 +215,8 @@ ${minimapCss}
 
     const SCENES = ${scenesJson};
     const THEME = ${themeJson};
+    // How much taller than the default the logo is: the elements stacked below it move down by this much.
+    const LOGO_EXTRA = (THEME.logoHeight || ${LOGO_HEIGHT_DEFAULT}) - ${LOGO_HEIGHT_DEFAULT};
     const PROJECT_NAME = ${projectNameJson};
     let currentSceneId = "${initialSceneId}";
     let viewer = null;
@@ -372,7 +380,7 @@ ${minimapJs}
       if (FLOORPLAN_CORNER === "top-right") return 70;
       var navbar = THEME.showNavbar !== false && !!THEME.logoUrl;
       var title = THEME.showTitleOverlay !== false;
-      return title ? (navbar ? 130 : 76) : navbar ? 72 : 20;
+      return title ? (navbar ? 130 + LOGO_EXTRA : 76) : navbar ? 72 + LOGO_EXTRA : 20;
     }
 
     function setupMinimap() {
@@ -464,9 +472,15 @@ ${minimapJs}
       var titleEl = document.getElementById("title");
       if (THEME.showTitleOverlay !== false) titleEl.classList.add("visible");
       if (THEME.showNavbar !== false && THEME.logoUrl) {
-        document.getElementById("logo").src = THEME.logoUrl;
+        const logoEl = document.getElementById("logo");
+        const logoHeight = ${LOGO_HEIGHT_DEFAULT} + LOGO_EXTRA;
+        logoEl.src = THEME.logoUrl;
+        logoEl.style.height = logoHeight + "px";
+        logoEl.style.maxHeight = "none";
+        logoEl.style.maxWidth = logoHeight * ${LOGO_MAX_ASPECT} + "px";
         document.getElementById("navbar").classList.add("visible");
         titleEl.classList.add("with-navbar");
+        titleEl.style.top = 78 + LOGO_EXTRA + "px";
       }
     }
 

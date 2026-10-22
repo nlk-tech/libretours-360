@@ -31,7 +31,14 @@ function freshProvider() {
 }
 
 function baseTheme(overrides: Partial<Theme> = {}): Theme {
-  return { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [], ...overrides };
+  return {
+    showNavbar: true,
+    showTitleOverlay: true,
+    logoUrl: "",
+    logoHeight: 32,
+    overlays: [],
+    ...overrides,
+  };
 }
 
 // ─── Built-ins & listing ────────────────────────────────────────────────────

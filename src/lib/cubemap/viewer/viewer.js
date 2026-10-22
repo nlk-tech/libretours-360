@@ -142,6 +142,12 @@
   var titleEl = document.getElementById("title");
   var navbarEl = document.getElementById("navbar");
   var logoEl = document.getElementById("logo");
+  // Theme.logoHeight; defaults and aspect limit as in src/types/tour.ts. The
+  // elements stacked below the logo bar move down by logoExtra.
+  var LOGO_HEIGHT_DEFAULT = 32;
+  var LOGO_MAX_ASPECT = 5;
+  var logoHeight = (TOUR.theme && TOUR.theme.logoHeight) || LOGO_HEIGHT_DEFAULT;
+  var logoExtra = logoHeight - LOGO_HEIGHT_DEFAULT;
   var overlaysEl = document.getElementById("theme-overlays");
   var sceneListEl = document.getElementById("scene-list");
   var loaderEl = document.getElementById("loader");
@@ -876,7 +882,7 @@
     if (corner === "top-right") return 70;
     var navbar = navbarEl.classList.contains("visible");
     var title = titleEl.classList.contains("visible");
-    return title ? (navbar ? 130 : 76) : navbar ? 72 : 20;
+    return title ? (navbar ? 130 + logoExtra : 76) : navbar ? 72 + logoExtra : 20;
   }
 
   function setupMinimap() {
@@ -1141,8 +1147,12 @@
   if (!(TOUR.theme && TOUR.theme.showTitleOverlay === false)) titleEl.classList.add("visible");
   if (TOUR.theme && TOUR.theme.showNavbar !== false && TOUR.theme.logoUrl) {
     logoEl.src = TOUR.theme.logoUrl;
+    logoEl.style.height = logoHeight + "px";
+    logoEl.style.maxHeight = "none";
+    logoEl.style.maxWidth = logoHeight * LOGO_MAX_ASPECT + "px";
     navbarEl.classList.add("visible");
     titleEl.classList.add("with-navbar");
+    titleEl.style.top = 78 + logoExtra + "px";
   }
   buildSceneList();
   setupMinimap();

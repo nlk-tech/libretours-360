@@ -47,6 +47,8 @@ export interface CubemapTour {
     showNavbar: boolean;
     /** A data: URL, or "" if there is no logo. Never a remote URL: the tour must not depend on the network. */
     logoUrl: string;
+    /** Height of the logo, px (see Theme.logoHeight). Missing in tours exported before it existed. */
+    logoHeight?: number;
     /**
      * Custom overlay elements. "logo"/"image" elements carry their content as a
      * data: URL (or "" if it could not be resolved), same as logoUrl above.
@@ -113,6 +115,7 @@ export function buildTour(
       showTitleOverlay: project.theme.showTitleOverlay,
       showNavbar: project.theme.showNavbar,
       logoUrl: logoDataUrl,
+      logoHeight: project.theme.logoHeight,
       overlays,
     },
     showMeasurements: project.showMeasurements !== false,

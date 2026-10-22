@@ -41,16 +41,26 @@ test("fills in theme defaults, including an empty overlays array, when theme is 
     showNavbar: true,
     showTitleOverlay: true,
     logoUrl: "",
+    logoHeight: 32,
     overlays: [],
   });
 });
 
-test("accepts a theme saved by an earlier version (no 'overlays' field)", () => {
+test("accepts a theme saved by an earlier version (no 'overlays' or 'logoHeight' field)", () => {
   const project = validateOrMigrateProject(
     baseProject({ theme: { showNavbar: false, showTitleOverlay: true, logoUrl: "" } }),
   );
   assert.equal(project.theme.showNavbar, false);
   assert.deepEqual(project.theme.overlays, []);
+  assert.equal(project.theme.logoHeight, 32);
+});
+
+test("keeps logoHeight as saved, clamping an out-of-range one instead of rejecting the project", () => {
+  const height = (logoHeight: number) =>
+    validateOrMigrateProject(baseProject({ theme: { logoHeight } })).theme.logoHeight;
+  assert.equal(height(80), 80);
+  assert.equal(height(2), 16);
+  assert.equal(height(5000), 160);
 });
 
 test("accepts a local 'asset:' logo reference", () => {

@@ -42,6 +42,7 @@ const project = (over: Partial<TourProject> = {}): TourProject => ({
     showNavbar: true,
     showTitleOverlay: true,
     logoUrl: "data:image/png;base64,AAAA",
+    logoHeight: 32,
     overlays: [
       overlay(),
       overlay({ id: "o2", type: "image", content: "data:image/png;base64,BBBB" }),
@@ -153,11 +154,27 @@ test("Web 3D: the theme is embedded and rendered (logo bar, title, overlays with
   assert.equal(image!.src, "data:image/png;base64,BBBB");
 });
 
+test("Web 3D: the logo takes theme.logoHeight and pushes the title down", async () => {
+  const p = project();
+  p.theme = { ...p.theme, logoHeight: 64 };
+  const els = await runViewer(viewerHtml3D(p));
+
+  assert.equal(els.get("logo")!.style["height"], "64px");
+  assert.equal(els.get("logo")!.style["maxWidth"], "320px");
+  assert.equal(els.get("title")!.style["top"], "110px");
+});
+
 test("Web 3D: showNavbar / showTitleOverlay turned off hide the logo bar and the title", async () => {
   const els = await runViewer(
     viewerHtml3D(
       project({
-        theme: { showNavbar: false, showTitleOverlay: false, logoUrl: "data:x", overlays: [] },
+        theme: {
+          showNavbar: false,
+          showTitleOverlay: false,
+          logoUrl: "data:x",
+          logoHeight: 32,
+          overlays: [],
+        },
       }),
     ),
   );
@@ -173,6 +190,7 @@ test("Web 3D: theme text cannot close the inline <script>", () => {
         showNavbar: true,
         showTitleOverlay: true,
         logoUrl: "",
+        logoHeight: 32,
         overlays: [overlay({ content: "</script><script>alert(1)</script>" })],
       },
     }),
@@ -250,7 +268,13 @@ test("Web 3D export writes index.html through the sink; remote panoramas stay as
   const files = new Map<string, Uint8Array | string>();
   const p = project();
   p.scenes[0]!.panoramaUrl = "https://example.com/hall.jpg";
-  p.theme = { showNavbar: false, showTitleOverlay: true, logoUrl: "", overlays: [] };
+  p.theme = {
+    showNavbar: false,
+    showTitleOverlay: true,
+    logoUrl: "",
+    logoHeight: 32,
+    overlays: [],
+  };
   await writeWeb3DTour(p, { writeFile: async (path, data) => void files.set(path, data) });
   assert.deepEqual([...files.keys()], ["index.html"]);
   assert.match(String(files.get("index.html")), /https:\/\/example\.com\/hall\.jpg/);

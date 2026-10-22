@@ -56,7 +56,7 @@ const project = (scenes: Scene[], over: Partial<TourProject> = {}): TourProject 
   updatedAt: "2026-01-01T00:00:00.000Z",
   initialSceneId: null,
   scenes,
-  theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [] },
+  theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", logoHeight: 32, overlays: [] },
   floorplans: [],
   showMeasurements: true,
   showFloorplan: true,
@@ -142,10 +142,17 @@ const overlay = (over: Partial<ThemeOverlayElement> = {}): ThemeOverlayElement =
   ...over,
 });
 
+test("buildTour carries theme.logoHeight through", () => {
+  const base = project([scene("a", "Hall")]);
+  const p = { ...base, theme: { ...base.theme, logoHeight: 72 } };
+  const tour = buildTour(p, [{ sceneId: "a", dir: "a", hasThumbnail: false }]);
+  assert.equal(tour.theme.logoHeight, 72);
+});
+
 test("buildTour carries theme.overlays through (defaults to the project's own, unresolved)", () => {
   const overlays = [overlay(), overlay({ id: "o2", type: "logo", content: "asset:foo.png" })];
   const p = project([scene("a", "Hall")], {
-    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays },
+    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", logoHeight: 32, overlays },
   });
   const tour = buildTour(p, [{ sceneId: "a", dir: "a", hasThumbnail: false }]);
   assert.deepEqual(tour.theme.overlays, overlays);
@@ -171,7 +178,13 @@ test("buildTour uses the given overlays override instead of the project's raw on
     overlay({ id: "o1", type: "image", content: "data:image/png;base64,x" }),
   ];
   const p = project([scene("a", "Hall")], {
-    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: rawOverlays },
+    theme: {
+      showNavbar: true,
+      showTitleOverlay: true,
+      logoUrl: "",
+      logoHeight: 32,
+      overlays: rawOverlays,
+    },
   });
   const tour = buildTour(
     p,
@@ -189,7 +202,13 @@ test("exportCubemapTour resolves overlay images via getOverlaysForExport", async
     overlay({ id: "o1", type: "image", content: "data:image/png;base64,x" }),
   ];
   const p = project([scene("a", "Hall")], {
-    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: rawOverlays },
+    theme: {
+      showNavbar: true,
+      showTitleOverlay: true,
+      logoUrl: "",
+      logoHeight: 32,
+      overlays: rawOverlays,
+    },
   });
   await exportCubemapTour(
     p,
@@ -204,7 +223,13 @@ test("a getOverlaysForExport failure does not fail the export; overlays are just
   const sink = new MemorySink();
   const rawOverlays = [overlay({ id: "o1", type: "image", content: "asset:foo.png" })];
   const p = project([scene("a", "Hall")], {
-    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: rawOverlays },
+    theme: {
+      showNavbar: true,
+      showTitleOverlay: true,
+      logoUrl: "",
+      logoHeight: 32,
+      overlays: rawOverlays,
+    },
   });
   const warn = console.warn;
   console.warn = () => {};

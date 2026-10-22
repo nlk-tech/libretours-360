@@ -509,6 +509,7 @@ export function defineStorageSuite(harness: Harness): void {
             showNavbar: true,
             showTitleOverlay: false,
             logoUrl: `asset:${logo}`,
+            logoHeight: 32,
             overlays: [
               {
                 id: "o1",

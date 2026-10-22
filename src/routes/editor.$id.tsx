@@ -48,6 +48,7 @@ import {
   importPanoramaFiles,
   importPanoramaPaths,
   pickPanoramaPaths,
+  readDroppedFile,
   type ImportedPanorama,
   type ImportProgress,
 } from "@/lib/panorama-import";
@@ -575,6 +576,19 @@ function Studio() {
       console.error("Could not upload the logo", e);
       toast.error(t("editor.toasts.logoUploadFailed"), { description: describeStorageError(e) });
     }
+  };
+
+  /** Tauri: a logo dropped onto the window arrives as a path. */
+  const handleLogoDropPath = async (path: string) => {
+    let file: File;
+    try {
+      file = await readDroppedFile(path);
+    } catch (e) {
+      console.error("Could not read the dropped logo", e);
+      toast.error(t("editor.toasts.logoUploadFailed"), { description: describeStorageError(e) });
+      return;
+    }
+    await handleLogoFile(file);
   };
 
   const handleRemoveLogo = () => {
@@ -1161,6 +1175,7 @@ function Studio() {
             update((draft) => ({ ...draft, theme: { ...draft.theme, ...patch } }))
           }
           onLogoFileSelected={handleLogoFile}
+          onLogoDropPath={handleLogoDropPath}
           onLogoRemove={handleRemoveLogo}
           themePresets={themePresets}
           onSaveThemePreset={handleSaveThemePreset}

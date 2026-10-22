@@ -8,7 +8,14 @@
  * the TourProject type instead of guarding against `undefined` at runtime.
  */
 import { z } from "zod";
-import { CURRENT_SCHEMA_VERSION, type ThemePreset, type TourProject } from "@/types/tour";
+import {
+  CURRENT_SCHEMA_VERSION,
+  LOGO_HEIGHT_DEFAULT,
+  LOGO_HEIGHT_MAX,
+  LOGO_HEIGHT_MIN,
+  type ThemePreset,
+  type TourProject,
+} from "@/types/tour";
 import { isSafeProjectId, isSafeStorageKey } from "./safe-key";
 import { ASSET_REF_PREFIX, GENERIC_ASSET_REF_PREFIX } from "./storage-layout";
 import { ProjectValidationError } from "./storage-errors";
@@ -137,6 +144,10 @@ export const themeSchema = z.object({
   showNavbar: z.boolean().default(true),
   showTitleOverlay: z.boolean().default(true),
   logoUrl: assetRefUrl.default(""),
+  // Clamped rather than rejected: a bad size must not make a project unloadable.
+  logoHeight: finiteNumber
+    .default(LOGO_HEIGHT_DEFAULT)
+    .transform((h) => Math.min(LOGO_HEIGHT_MAX, Math.max(LOGO_HEIGHT_MIN, h))),
   overlays: z.array(themeOverlayElementSchema).default([]),
 });
 

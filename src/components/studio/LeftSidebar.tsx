@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   BookmarkPlus,
@@ -22,19 +22,30 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import type { Scene, Theme, ThemeOverlayElementType, ThemePreset } from "@/types/tour";
+import {
+  LOGO_HEIGHT_MAX,
+  LOGO_HEIGHT_MIN,
+  type Scene,
+  type Theme,
+  type ThemeOverlayElementType,
+  type ThemePreset,
+} from "@/types/tour";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { hasNativeImport, listenPanoramaDrop } from "@/lib/panorama-import";
+import { hasNativeImport } from "@/lib/panorama-import";
+import { useFileDropZone } from "@/hooks/use-file-drop-zone";
 import { isBuiltInThemePreset } from "@/lib/theme-store";
 
 /** Formats accepted by the logo/overlay image picker. */
 const LOGO_ACCEPT = "image/png,image/svg+xml,image/jpeg,image/webp";
 const LOGO_MIME_PATTERN = /image\/(png|svg\+xml|jpeg|webp)/;
+/** Same formats, by file name: native drops (desktop app) arrive as paths. */
+const LOGO_PATH_PATTERN = /\.(png|svg|jpe?g|webp)$/i;
 
 export type SidebarTab = "scenes" | "theme" | "floorplans";
 
@@ -66,6 +77,8 @@ interface Props {
   onThemeChange: (patch: Partial<Theme>) => void;
   /** A logo image was picked (drag & drop or the file input); stores it and updates theme.logoUrl. */
   onLogoFileSelected: (file: File) => void;
+  /** Tauri: an image file dropped from the OS onto the logo area (path). */
+  onLogoDropPath: (path: string) => void;
   onLogoRemove: () => void;
   /** Built-in presets plus the user's saved library, in that order. */
   themePresets: ThemePreset[];
@@ -143,6 +156,7 @@ export function LeftSidebar({
   onDropPaths,
   onThemeChange,
   onLogoFileSelected,
+  onLogoDropPath,
   onLogoRemove,
   themePresets,
   onSaveThemePreset,
@@ -155,12 +169,18 @@ export function LeftSidebar({
 }: Props) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
-  const dropZoneRef = useRef<HTMLDivElement>(null);
-  const onDropPathsRef = useRef(onDropPaths);
-  onDropPathsRef.current = onDropPaths;
+  const panoramaDrop = useFileDropZone({ onFiles, onPaths: onDropPaths });
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const [logoDragOver, setLogoDragOver] = useState(false);
+  const logoDrop = useFileDropZone({
+    onFiles: (files) => {
+      const file = files.find((f) => LOGO_MIME_PATTERN.test(f.type));
+      if (file) onLogoFileSelected(file);
+    },
+    onPaths: (paths) => {
+      const path = paths.find((p) => LOGO_PATH_PATTERN.test(p));
+      if (path) onLogoDropPath(path);
+    },
+  });
   const importThemeInputRef = useRef<HTMLInputElement>(null);
   const [presetName, setPresetName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -176,40 +196,6 @@ export function LeftSidebar({
       const rect = sceneRowRefs.current[s.id]?.getBoundingClientRect();
       return rect ? clientY > rect.top + rect.height / 2 : false;
     }).length;
-
-  // The desktop webview swallows HTML5 drops of OS files (the onDrop handler
-  // below never fires there): listen to the native drop event instead and
-  // hit-test the drop zone ourselves.
-  useEffect(() => {
-    if (!hasNativeImport()) return;
-    const isOverZone = (x: number, y: number) => {
-      const rect = dropZoneRef.current?.getBoundingClientRect();
-      return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
-    };
-    let unlisten: (() => void) | null = null;
-    let disposed = false;
-    listenPanoramaDrop((event) => {
-      if (event.type === "leave") {
-        setDragOver(false);
-      } else if (event.type === "over") {
-        setDragOver(isOverZone(event.x, event.y));
-      } else {
-        setDragOver(false);
-        if (isOverZone(event.x, event.y) && event.paths.length) {
-          onDropPathsRef.current(event.paths);
-        }
-      }
-    })
-      .then((fn) => {
-        if (disposed) fn();
-        else unlisten = fn;
-      })
-      .catch((e) => console.warn("Could not listen to file drops", e));
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
 
   const builtInPresets = themePresets.filter((p) => isBuiltInThemePreset(p.id));
   const savedPresets = themePresets.filter((p) => !isBuiltInThemePreset(p.id));
@@ -241,20 +227,11 @@ export function LeftSidebar({
 
         <TabsContent value="scenes" className="m-0 min-h-0 flex-1 overflow-y-auto p-3">
           <div
-            ref={dropZoneRef}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              if (e.dataTransfer.files?.length) onFiles(e.dataTransfer.files);
-            }}
+            ref={panoramaDrop.ref}
+            {...panoramaDrop.dropProps}
             className={cn(
               "mb-3 rounded-lg border border-dashed p-4 text-center transition-colors",
-              dragOver ? "border-primary bg-primary/10" : "border-border bg-panel",
+              panoramaDrop.dragOver ? "border-primary bg-primary/10" : "border-border bg-panel",
             )}
           >
             <Upload className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
@@ -429,7 +406,14 @@ export function LeftSidebar({
           <div className="space-y-1.5">
             <Label className="text-xs">{t("editor.sidebar.theme.logo")}</Label>
             {logoPreviewUrl ? (
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-panel p-2">
+              <div
+                ref={logoDrop.ref}
+                {...logoDrop.dropProps}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border bg-panel p-2 transition-colors",
+                  logoDrop.dragOver ? "border-primary bg-primary/10" : "border-border",
+                )}
+              >
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded bg-muted">
                   <img
                     src={logoPreviewUrl}
@@ -457,22 +441,11 @@ export function LeftSidebar({
               </div>
             ) : (
               <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setLogoDragOver(true);
-                }}
-                onDragLeave={() => setLogoDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setLogoDragOver(false);
-                  const file = Array.from(e.dataTransfer.files).find((f) =>
-                    LOGO_MIME_PATTERN.test(f.type),
-                  );
-                  if (file) onLogoFileSelected(file);
-                }}
+                ref={logoDrop.ref}
+                {...logoDrop.dropProps}
                 className={cn(
                   "cursor-pointer rounded-lg border border-dashed p-3 text-center transition-colors",
-                  logoDragOver ? "border-primary bg-primary/10" : "border-border bg-panel",
+                  logoDrop.dragOver ? "border-primary bg-primary/10" : "border-border bg-panel",
                 )}
                 onClick={() => logoInputRef.current?.click()}
               >
@@ -496,6 +469,24 @@ export function LeftSidebar({
                 e.target.value = "";
               }}
             />
+            {logoPreviewUrl && (
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">{t("editor.sidebar.theme.logoSize")}</Label>
+                  <span className="text-[10px] tabular-nums text-muted-foreground">
+                    {theme.logoHeight} px
+                  </span>
+                </div>
+                <Slider
+                  min={LOGO_HEIGHT_MIN}
+                  max={LOGO_HEIGHT_MAX}
+                  step={2}
+                  value={[theme.logoHeight]}
+                  onValueChange={([v]) => v !== undefined && onThemeChange({ logoHeight: v })}
+                  aria-label={t("editor.sidebar.theme.logoSize")}
+                />
+              </div>
+            )}
             <p className="text-[10px] text-muted-foreground">
               {t("editor.sidebar.theme.logoUrlHint")}
             </p>

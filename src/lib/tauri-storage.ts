@@ -636,6 +636,14 @@ async function resolveExistingAssetUrl(
 
 // ─── Native panorama import (dialog + file copy) ───────────────────────────
 
+const IMAGE_MIME_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  svg: "image/svg+xml",
+};
+
 const nativeImport: NativeImport = {
   async pick() {
     const { open } = await import("@tauri-apps/plugin-dialog");
@@ -652,11 +660,21 @@ const nativeImport: NativeImport = {
     }
   },
   copyIntoProject: copyPanoramaFromPath,
+  async readDroppedFile(srcPath) {
+    const { fs } = await ensureTauri();
+    const bytes = await fsOp(srcPath, () => fs.readFile(srcPath));
+    const name = srcPath.split(/[\\/]/).pop() ?? srcPath;
+    const ext = name.match(/\.([A-Za-z0-9]+)$/)?.[1]?.toLowerCase() ?? "";
+    return new File([bytes], name, { type: IMAGE_MIME_TYPES[ext] ?? "" });
+  },
   async listenFileDrop(handler) {
     const { getCurrentWebview } = await import("@tauri-apps/api/webview");
-    // Tauri reports physical pixels; the DOM works in CSS pixels.
+    // Tauri types the position as physical pixels, but only WebView2 (Windows)
+    // really reports them; WKWebView (macOS) and WebKitGTK (Linux) report
+    // logical points, which already are CSS pixels (wry 0.55).
+    const scaled = /Windows/.test(navigator.userAgent);
     return await getCurrentWebview().onDragDropEvent(({ payload }) => {
-      const ratio = window.devicePixelRatio || 1;
+      const ratio = scaled ? window.devicePixelRatio || 1 : 1;
       switch (payload.type) {
         case "enter":
         case "over":

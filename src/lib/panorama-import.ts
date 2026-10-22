@@ -7,7 +7,7 @@
  *    the project's panoramas folder, so the image never travels through the
  *    WebView's memory.
  *    Files dropped onto the desktop window arrive as paths too
- *    (`listenPanoramaDrop`) and take the same route.
+ *    (`listenFileDrop`) and take the same route.
  *  - Browser drag & drop and the file input (`importPanoramaFiles`): File
  *    objects are read into memory and stored through `putBlob`.
  *
@@ -91,12 +91,17 @@ export async function pickPanoramaPaths(): Promise<string[] | null> {
  * Listens to files dropped onto the desktop window (see NativeImport.listenFileDrop).
  * Only meaningful where `hasNativeImport()`.
  */
-export async function listenPanoramaDrop(
-  handler: (event: FileDropEvent) => void,
-): Promise<() => void> {
+export async function listenFileDrop(handler: (event: FileDropEvent) => void): Promise<() => void> {
   const native = getStorageProvider().nativeImport;
   if (!native) throw new Error("Native file import is not available here");
   return await native.listenFileDrop(handler);
+}
+
+/** Reads a file dropped onto the desktop window into memory (small files only, e.g. a logo). */
+export async function readDroppedFile(path: string): Promise<File> {
+  const native = getStorageProvider().nativeImport;
+  if (!native) throw new Error("Native file import is not available here");
+  return await native.readDroppedFile(path);
 }
 
 /**

@@ -1,12 +1,15 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ImageUp, Map, MapPinOff, Plus, Trash2 } from "lucide-react";
+import { ImageUp, Map, MapPinOff, Plus, Trash2, Upload } from "lucide-react";
 import type { Floorplan, FloorplanCorner, FloorplanOffset, Scene } from "@/types/tour";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { readDroppedFile } from "@/lib/panorama-import";
+import { useFileDropZone } from "@/hooks/use-file-drop-zone";
 import {
   Select,
   SelectContent,
@@ -103,6 +106,21 @@ export function FloorplansPanel({
     if (FLOORPLAN_MIME_PATTERN.test(file.type)) accept(file);
     else toast.error(t("editor.toasts.floorplanOnlyImages"));
   };
+
+  // Dropping several images adds one floor plan each.
+  const addDrop = useFileDropZone({
+    onFiles: (files) => files.forEach((file) => withImage(file, onAdd)),
+    onPaths: (paths) =>
+      paths.forEach((path) =>
+        readDroppedFile(path).then(
+          (file) => withImage(file, onAdd),
+          (e) => {
+            console.error("Could not read the dropped floor plan", e);
+            toast.error(t("editor.toasts.floorplanUploadFailed"));
+          },
+        ),
+      ),
+  });
 
   const pickFile = (input: HTMLInputElement | null) => {
     if (!input) return;
@@ -216,15 +234,26 @@ export function FloorplansPanel({
         </div>
       )}
 
-      <Button
-        size="sm"
-        variant="secondary"
-        className="w-full"
-        onClick={() => pickFile(addInputRef.current)}
+      <div
+        ref={addDrop.ref}
+        {...addDrop.dropProps}
+        className={cn(
+          "rounded-lg border border-dashed p-3 text-center transition-colors",
+          addDrop.dragOver ? "border-primary bg-primary/10" : "border-border bg-panel",
+        )}
       >
-        <Plus className="mr-1.5 h-3.5 w-3.5" />
-        {t("editor.sidebar.floorplans.add")}
-      </Button>
+        <Upload className="mx-auto mb-1.5 h-4 w-4 text-muted-foreground" />
+        <p className="text-xs text-muted-foreground">{t("editor.sidebar.floorplans.dropHint")}</p>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="mt-2 w-full"
+          onClick={() => pickFile(addInputRef.current)}
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          {t("editor.sidebar.floorplans.add")}
+        </Button>
+      </div>
 
       {floorplans.length > 0 && (
         <>

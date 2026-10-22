@@ -109,8 +109,16 @@ export interface Theme {
   showTitleOverlay: boolean;
   /** Empty, a data: URL, or an "asset:<key>" reference to a locally stored image (never a remote URL). */
   logoUrl: string;
+  /** Height of the logo in the navbar, px (LOGO_HEIGHT_MIN..LOGO_HEIGHT_MAX); its width follows the aspect ratio. */
+  logoHeight: number;
   overlays: ThemeOverlayElement[];
 }
+
+export const LOGO_HEIGHT_DEFAULT = 32;
+export const LOGO_HEIGHT_MIN = 16;
+export const LOGO_HEIGHT_MAX = 160;
+/** The logo may be at most this many times wider than tall (keeps wide wordmarks in check). */
+export const LOGO_MAX_ASPECT = 5;
 
 /** Alias for the theme, used where the richer (overlay-capable) shape is meant. */
 export type ThemeConfig = Theme;
@@ -185,6 +193,7 @@ export const defaultTheme = (): Theme => ({
   showNavbar: true,
   showTitleOverlay: true,
   logoUrl: "",
+  logoHeight: LOGO_HEIGHT_DEFAULT,
   overlays: [],
 });
 

@@ -39,6 +39,11 @@ export interface NativeImport {
    * Resolves with the function that stops listening.
    */
   listenFileDrop(handler: (event: FileDropEvent) => void): Promise<() => void>;
+  /**
+   * Reads a dropped file into memory, for small files that are stored through
+   * the regular APIs (a logo). Its type is guessed from the extension.
+   */
+  readDroppedFile(path: string): Promise<File>;
 }
 
 export type FileDropEvent =

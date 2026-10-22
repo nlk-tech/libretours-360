@@ -145,7 +145,7 @@ export function makeProject(id: string, overrides: Partial<TourProject> = {}): T
     updatedAt: now,
     initialSceneId: null,
     scenes: [],
-    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", overlays: [] },
+    theme: { showNavbar: true, showTitleOverlay: true, logoUrl: "", logoHeight: 32, overlays: [] },
     floorplans: [],
     showMeasurements: true,
     showFloorplan: true,

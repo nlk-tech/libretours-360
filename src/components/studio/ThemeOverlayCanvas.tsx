@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Image as ImageIcon } from "lucide-react";
-import type { Theme } from "@/types/tour";
+import { LOGO_MAX_ASPECT, type Theme } from "@/types/tour";
 import { resolveThemeAssetUrl } from "@/lib/theme-assets";
 import { cn } from "@/lib/utils";
 import {
@@ -62,6 +62,7 @@ export function ThemeOverlayCanvas({
   }, [projectId, imageRefsKey]);
 
   const navbarVisible = theme.showNavbar && !!logoPreviewUrl;
+  const logoHeight = theme.logoHeight;
   const variables: Record<string, string> = {
     "scene.title": sceneName ?? "",
     "project.name": projectName,
@@ -71,15 +72,19 @@ export function ThemeOverlayCanvas({
     <div className="pointer-events-none absolute inset-0 select-none overflow-hidden">
       {navbarVisible && (
         <div className="absolute left-4 top-4 flex items-center rounded-lg border border-border bg-card/85 px-3 py-2 backdrop-blur">
-          <img src={logoPreviewUrl} alt="" className="h-8 max-w-[160px] object-contain" />
+          <img
+            src={logoPreviewUrl}
+            alt=""
+            className="object-contain"
+            style={{ height: logoHeight, maxWidth: logoHeight * LOGO_MAX_ASPECT }}
+          />
         </div>
       )}
       {theme.showTitleOverlay && (
         <div
-          className={cn(
-            "absolute left-4 rounded-lg border border-border bg-card/85 px-3 py-2 backdrop-blur",
-            navbarVisible ? "top-[72px]" : "top-4",
-          )}
+          className="absolute left-4 rounded-lg border border-border bg-card/85 px-3 py-2 backdrop-blur"
+          // Below the logo bar: 16px top + logo + 16px padding + 2px border + 6px gap.
+          style={{ top: navbarVisible ? 40 + logoHeight : 16 }}
         >
           <p className="text-xs font-semibold">{projectName}</p>
           {sceneName && <p className="text-[11px] text-muted-foreground">{sceneName}</p>}

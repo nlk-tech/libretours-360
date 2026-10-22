@@ -10,7 +10,13 @@
  * does the reverse when a preset is applied to a project or a file is
  * imported: every `data:` URL becomes a real asset stored under that project.
  */
-import { type Theme, type ThemeOverlayElement, type ThemePreset, uid } from "@/types/tour";
+import {
+  LOGO_HEIGHT_DEFAULT,
+  type Theme,
+  type ThemeOverlayElement,
+  type ThemePreset,
+  uid,
+} from "@/types/tour";
 import {
   THEME_EXPORT_FORMAT_VERSION,
   type ThemeExportFile,
@@ -52,7 +58,13 @@ export const BUILTIN_THEME_PRESETS: ThemePreset[] = [
   {
     id: `${BUILTIN_PREFIX}minimal`,
     name: "Minimal",
-    theme: { showNavbar: true, showTitleOverlay: false, logoUrl: "", overlays: [] },
+    theme: {
+      showNavbar: true,
+      showTitleOverlay: false,
+      logoUrl: "",
+      logoHeight: LOGO_HEIGHT_DEFAULT,
+      overlays: [],
+    },
     createdAt: "",
     updatedAt: "",
   },
@@ -63,6 +75,7 @@ export const BUILTIN_THEME_PRESETS: ThemePreset[] = [
       showNavbar: true,
       showTitleOverlay: true,
       logoUrl: "",
+      logoHeight: LOGO_HEIGHT_DEFAULT,
       overlays: [
         {
           id: "corporate-badge",
