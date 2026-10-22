@@ -195,9 +195,9 @@ const defaultsProject: TourProject = {
   ],
 };
 
-/** Same formula as the viewer's zoomToFov(): 0.6x..3x maps to 90..30 degrees. */
+/** Same formula as the viewer's zoomToFov(): 0.6x..3x maps to 90..30 degrees, 0.2x..0.6x to 110..90. */
 function zoomToFov(zoom: number): number {
-  return 90 - ((zoom - 0.6) / 2.4) * 60;
+  return zoom >= 0.6 ? 90 - ((zoom - 0.6) / 2.4) * 60 : 90 + ((0.6 - zoom) / 0.4) * 20;
 }
 
 // ─── Independent projection maths (dot products, not the viewer's rotations) ─
@@ -469,7 +469,7 @@ test(
     // pixel of that colour inside the picture is a missing face, a gap or a seam.
     // Skipped areas: the title, the fullscreen button, the scene list and the hotspots.
     const views: string[] = [];
-    for (const fov of [90, 50]) {
+    for (const fov of [110, 90, 50]) {
       for (let yaw = 0; yaw < 360; yaw += 30) {
         for (const pitch of [-75, -45, -20, 0, 20, 45, 75])
           views.push(`yaw=${yaw}&pitch=${pitch}&fov=${fov}`);
@@ -559,7 +559,7 @@ test(
   },
 );
 
-test("wheel zooms (limits 30..90 degrees) and arrow keys turn the view", { skip }, async () => {
+test("wheel zooms (limits 30..110 degrees) and arrow keys turn the view", { skip }, async () => {
   await open("#yaw=0&pitch=0&fov=90");
   const wide = (await hotspotCenters())[NAV]!;
   await page.wheel(500, 300, -300);

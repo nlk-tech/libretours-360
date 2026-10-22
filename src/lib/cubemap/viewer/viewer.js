@@ -94,7 +94,7 @@
   // Screen margin in pixels around the viewport inside which tiles are still shown.
   var CULL_MARGIN = 64;
   var MIN_FOV = 30;
-  var MAX_FOV = 90;
+  var MAX_FOV = 110;
   var MAX_PITCH = 89;
   var DEG = Math.PI / 180;
 
@@ -186,10 +186,14 @@
       .replace(/"/g, "&quot;");
   }
 
-  /** The editor stores zoom as a 0.6..3 multiplier; the editor viewer maps it to a 90..30 degree field of view. */
+  /**
+   * The editor stores zoom as a 0.2..3 multiplier: 0.6..3 maps to a 90..30 degree field of view,
+   * 0.2..0.6 widens it to 110..90 degrees (same formula as multiplierToFov() in PanoCanvas).
+   */
   function zoomToFov(zoom) {
     var z = typeof zoom === "number" && isFinite(zoom) ? zoom : 1;
-    return clamp(MAX_FOV - ((z - 0.6) / 2.4) * (MAX_FOV - MIN_FOV), MIN_FOV, MAX_FOV);
+    var fov = z >= 0.6 ? 90 - ((z - 0.6) / 2.4) * 60 : 90 + ((0.6 - z) / 0.4) * 20;
+    return clamp(fov, MIN_FOV, MAX_FOV);
   }
 
   // ─── Theme overlays (logo/title live in #navbar/#title; theme.overlays here) ─

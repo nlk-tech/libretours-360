@@ -28,7 +28,6 @@ import "@photo-sphere-viewer/core/index.css";
 import "@photo-sphere-viewer/markers-plugin/index.css";
 import ReactMarkdown from "react-markdown";
 
-const MIN_ZOOM = 0.6;
 const DEG = Math.PI / 180;
 
 /** Marker ids of saved measurements: `ms-<measurementId>-<part>`. */
@@ -88,20 +87,32 @@ function removeMarkersWhere(markers: MarkersPlugin | null, pred: (id: string) =>
     // ignore
   }
 }
-const MAX_ZOOM = 3;
+// Field of view (vertical, degrees) at the ends of the zoom range.
+const MIN_FOV = 30;
+const MAX_FOV = 110;
 
 /**
- * Converts a zoom multiplier (0.6x–3x) to PSV zoom level (0–100).
+ * Field of view of a zoom multiplier (0.2x–3x). 0.6x–3x maps to 90°–30°, as it
+ * always did, so saved scenes keep their view; below 0.6x the view widens
+ * further, down to 110° at 0.2x. Same formula as zoomToFov() in the exported viewer.
  */
-function multiplierToPsv(multiplier: number): number {
-  return ((multiplier - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) * 100;
+function multiplierToFov(multiplier: number): number {
+  const z = Math.min(Math.max(multiplier, 0.2), 3);
+  return z >= 0.6 ? 90 - ((z - 0.6) / 2.4) * 60 : 90 + ((0.6 - z) / 0.4) * 20;
 }
 
-/**
- * Converts a PSV zoom level (0–100) to a zoom multiplier (0.6x–3x).
- */
+function fovToMultiplier(fov: number): number {
+  return fov <= 90 ? 0.6 + ((90 - fov) / 60) * 2.4 : 0.6 - ((fov - 90) / 20) * 0.4;
+}
+
+/** Converts a zoom multiplier to PSV zoom level (0–100), which is linear in FOV. */
+function multiplierToPsv(multiplier: number): number {
+  return ((MAX_FOV - multiplierToFov(multiplier)) / (MAX_FOV - MIN_FOV)) * 100;
+}
+
+/** Converts a PSV zoom level (0–100) to a zoom multiplier. */
 function psvToMultiplier(psvLevel: number): number {
-  return MIN_ZOOM + (psvLevel / 100) * (MAX_ZOOM - MIN_ZOOM);
+  return fovToMultiplier(MAX_FOV - (psvLevel / 100) * (MAX_FOV - MIN_FOV));
 }
 
 interface Props {
@@ -197,7 +208,7 @@ export function PanoCanvas({
   const measureDragCleanupRef = useRef<(() => void) | null>(null);
   const [zoom, setZoom] = useState(scene?.defaultZoom ?? 1);
   // Raw PSV zoom level (0–100), used only to drive the % badge in the toolbar.
-  // Kept separate from `zoom` (the 0.6x–3x multiplier persisted as the scene's
+  // Kept separate from `zoom` (the 0.2x–3x multiplier persisted as the scene's
   // default view) so the badge reads a natural 0–100% scale.
   const [zoomPercent, setZoomPercent] = useState(() =>
     Math.round(multiplierToPsv(scene?.defaultZoom ?? 1)),
@@ -251,7 +262,7 @@ export function PanoCanvas({
 
     let viewer: Viewer;
     try {
-      // Convert the app's multiplier zoom (0.6–3) to PSV zoom level (0–100)
+      // Convert the app's multiplier zoom (0.2–3) to PSV zoom level (0–100)
       const initialMultiplier = scene?.defaultZoom ?? 1;
       const initialPsvZoom = multiplierToPsv(initialMultiplier);
 
@@ -265,8 +276,8 @@ export function PanoCanvas({
         mousewheel: true,
         mousewheelCtrlKey: false,
         zoomSpeed: 1,
-        minFov: 30,
-        maxFov: 90,
+        minFov: MIN_FOV,
+        maxFov: MAX_FOV,
         defaultZoomLvl: initialPsvZoom,
         mousemove: true,
         moveSpeed: 1,
