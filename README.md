@@ -44,7 +44,7 @@ Built with [React](https://react.dev), [Photo Sphere Viewer](https://photo-spher
 | UI Library | [React 19](https://react.dev) |
 | Styling | [Tailwind CSS 4](https://tailwindcss.com) + [Radix UI](https://www.radix-ui.com/) primitives |
 | Panorama Engine | [Photo Sphere Viewer 5](https://photo-sphere-viewer.js.org/) + [Markers Plugin](https://photo-sphere-viewer.js.org/plugins/markers) |
-| State / Routing | [TanStack Router](https://tanstack.com/router/latest) + [TanStack Query](https://tanstack.com/query/latest) |
+| Routing | [TanStack Router](https://tanstack.com/router/latest) |
 | Validation | [Zod](https://zod.dev) project schema with versioned migrations |
 | Bundler | [Vite 8](https://vite.dev/) |
 | Desktop Packaging | [Tauri 2](https://v2.tauri.app/) (Rust backend) |
@@ -326,6 +326,7 @@ Contributions are welcome! Here's how you can help:
 - Keep the app **local-first** — everything must work offline with no backend dependency.
 - Use **TypeScript** for all new code.
 - Follow the existing component patterns (Radix UI primitives, Tailwind classes, `cn()` utility).
+- `src/components/ui/` holds only the [shadcn/ui](https://ui.shadcn.com) components in use; add another with `npx shadcn add <name>` (settings in `components.json`).
 - **No hardcoded UI strings** — add new strings to every dictionary in `src/locales/`.
 - Run `npm test` and test all export formats (Web 3D, Standalone 3D, `.ltproj`, JSON) when making changes to the viewer or data pipeline.
 

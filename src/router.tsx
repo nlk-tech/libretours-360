@@ -1,4 +1,3 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { createHashHistory } from "@tanstack/history";
 import { routeTree } from "./routeTree.gen";
@@ -9,11 +8,8 @@ const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
 const isFileProtocol = typeof window !== "undefined" && window.location.protocol === "file:";
 
 export const getRouter = () => {
-  const queryClient = new QueryClient();
-
   const router = createRouter({
     routeTree,
-    context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
     history: (isTauri || isFileProtocol ? createHashHistory() : undefined) as any,

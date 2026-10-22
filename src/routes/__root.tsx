@@ -1,11 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-} from "@tanstack/react-router";
+import { Outlet, Link, createRootRoute, useRouter, HeadContent } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -82,7 +75,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       { title: "LibreTours 360 - Studio" },
@@ -106,8 +99,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
   // <html lang> tracks the active language (set at start-up by lib/i18n.ts).
   useEffect(() => {
     const applyLang = () => {
@@ -121,7 +112,7 @@ function RootComponent() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       {/* Title and meta from the routes' head(); React 19 hoists them into <head>. */}
       <HeadContent />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
@@ -129,6 +120,6 @@ function RootComponent() {
       <Toaster theme="dark" />
       {/* After <Toaster/> so that issues buffered at start-up have somewhere to render. */}
       <StorageIssueToasts />
-    </QueryClientProvider>
+    </>
   );
 }
