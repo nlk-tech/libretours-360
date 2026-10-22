@@ -103,6 +103,7 @@
       "startScene": "Scena iniziale",
       "deleteScene": "Elimina scena",
       "reorderScene": "Trascina per riordinare",
+      "renameScene": "Clicca per rinominare",
       "theme": {
         "showNavbar": "Mostra barra di navigazione",
         "showNavbarHint": "Navigazione superiore del viewer",

@@ -1168,6 +1168,7 @@ function Studio() {
           onDeleteScene={handleDeleteScene}
           onReorderScene={handleReorderScene}
           onSetInitialScene={handleSetInitialScene}
+          onRenameScene={(sceneId, name) => patchScene(sceneId, { name })}
           onFiles={handleFiles}
           onPickNative={handlePickPanoramas}
           onDropPaths={handlePanoramaPaths}

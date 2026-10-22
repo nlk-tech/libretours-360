@@ -69,6 +69,7 @@ interface Props {
   /** Moves a scene to `toIndex` (index in the list after the scene has been removed). */
   onReorderScene: (id: string, toIndex: number) => void;
   onSetInitialScene: (id: string) => void;
+  onRenameScene: (id: string, name: string) => void;
   onFiles: (files: FileList | File[]) => void;
   /** Tauri: open the native file dialog (files are copied natively, not read into memory). */
   onPickNative: () => void;
@@ -151,6 +152,7 @@ export function LeftSidebar({
   onDeleteScene,
   onReorderScene,
   onSetInitialScene,
+  onRenameScene,
   onFiles,
   onPickNative,
   onDropPaths,
@@ -185,6 +187,8 @@ export function LeftSidebar({
   const [presetName, setPresetName] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [renamingSceneId, setRenamingSceneId] = useState<string | null>(null);
+  const [sceneNameValue, setSceneNameValue] = useState("");
   // Scene reordering uses pointer events, not HTML5 drag & drop: the Tauri webview
   // intercepts native drag events (dragDropEnabled), notably on Windows.
   const sceneRowRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -204,6 +208,17 @@ export function LeftSidebar({
     const name = renameValue.trim();
     if (name) onRenameThemePreset(id, name);
     setRenamingId(null);
+  };
+
+  const startSceneRename = (scene: Scene) => {
+    setRenamingSceneId(scene.id);
+    setSceneNameValue(scene.name);
+  };
+
+  const commitSceneRename = (id: string) => {
+    const name = sceneNameValue.trim();
+    if (name && name !== scenes.find((s) => s.id === id)?.name) onRenameScene(id, name);
+    setRenamingSceneId(null);
   };
 
   return (
@@ -330,7 +345,45 @@ export function LeftSidebar({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-medium">{scene.name}</p>
+                    {renamingSceneId === scene.id ? (
+                      <Input
+                        autoFocus
+                        value={sceneNameValue}
+                        onChange={(e) => setSceneNameValue(e.target.value)}
+                        onFocus={(e) => e.currentTarget.select()}
+                        onBlur={() => commitSceneRename(scene.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitSceneRename(scene.id);
+                          if (e.key === "Escape") setRenamingSceneId(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-6 px-1.5 text-xs"
+                      />
+                    ) : (
+                      // The first click selects the scene; a click on the name of the
+                      // selected scene, or a double click, renames it.
+                      <p
+                        className={cn(
+                          "truncate text-xs font-medium",
+                          scene.id === activeSceneId &&
+                            "cursor-text rounded-sm hover:bg-foreground/10",
+                        )}
+                        title={
+                          scene.id === activeSceneId ? t("editor.sidebar.renameScene") : undefined
+                        }
+                        onClick={(e) => {
+                          if (scene.id !== activeSceneId) return;
+                          e.stopPropagation();
+                          startSceneRename(scene);
+                        }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          startSceneRename(scene);
+                        }}
+                      >
+                        {scene.name}
+                      </p>
+                    )}
                     <SceneContentBadges scene={scene} isInitial={scene.id === initialSceneId} />
                   </div>
                   <div className="flex flex-col gap-0.5">

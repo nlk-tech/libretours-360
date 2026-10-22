@@ -103,6 +103,7 @@
       "startScene": "Start scene",
       "deleteScene": "Delete scene",
       "reorderScene": "Drag to reorder",
+      "renameScene": "Click to rename",
       "theme": {
         "showNavbar": "Show navbar",
         "showNavbarHint": "Viewer top navigation",
