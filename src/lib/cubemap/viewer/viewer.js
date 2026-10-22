@@ -1154,6 +1154,15 @@
     logoEl.style.height = logoHeight + "px";
     logoEl.style.maxHeight = "none";
     logoEl.style.maxWidth = logoHeight * LOGO_MAX_ASPECT + "px";
+    if (typeof TOUR.theme.logoBackground === "string") {
+      // A custom background replaces the default panel; the border stays (transparent) so the layout does not shift.
+      navbarEl.style.background = TOUR.theme.logoBackground;
+      navbarEl.style.borderColor = "transparent";
+      if (TOUR.theme.logoBackground === "transparent") {
+        navbarEl.style.backdropFilter = "none";
+        navbarEl.style.webkitBackdropFilter = "none";
+      }
+    }
     navbarEl.classList.add("visible");
     titleEl.classList.add("with-navbar");
     titleEl.style.top = 78 + logoExtra + "px";

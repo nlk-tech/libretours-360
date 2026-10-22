@@ -71,7 +71,18 @@ export function ThemeOverlayCanvas({
   return (
     <div className="pointer-events-none absolute inset-0 select-none overflow-hidden">
       {navbarVisible && (
-        <div className="absolute left-4 top-4 flex items-center rounded-lg border border-border bg-card/85 px-3 py-2 backdrop-blur">
+        <div
+          className={cn(
+            "absolute left-4 top-4 flex items-center rounded-lg border px-3 py-2",
+            // A custom background replaces the default panel; the border stays (transparent) so the layout does not shift.
+            theme.logoBackground === undefined
+              ? "border-border bg-card/85 backdrop-blur"
+              : "border-transparent",
+          )}
+          style={
+            theme.logoBackground === undefined ? undefined : { background: theme.logoBackground }
+          }
+        >
           <img
             src={logoPreviewUrl}
             alt=""

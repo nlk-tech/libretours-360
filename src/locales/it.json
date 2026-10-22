@@ -116,6 +116,7 @@
         "dragDropImage": "Trascina un'immagine qui o fai clic per selezionarla",
         "supportedFormats": "PNG, SVG, JPG o WebP",
         "logoPreview": "Anteprima del logo",
+        "logoBackground": "Sfondo del logo",
         "logoSize": "Dimensione del logo",
         "logoUrlHint": "L'immagine viene salvata nel progetto: nessun URL esterno o connessione di rete è richiesta nel viewer esportato."
       },
@@ -184,6 +185,7 @@
         "variablesHint": "Variabili disponibili: {{sceneVar}}, {{projectVar}}",
         "textColor": "Colore testo",
         "bgColor": "Colore sfondo",
+        "transparent": "Trasparente",
         "fontSize": "Dimensione carattere",
         "borderRadius": "Raggio bordo",
         "padding": "Padding",

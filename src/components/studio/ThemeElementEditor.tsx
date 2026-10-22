@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { BackgroundColorField } from "./BackgroundColorField";
 
 /** Formats accepted by the overlay image picker (same as the logo picker). */
 const IMAGE_ACCEPT = "image/png,image/svg+xml,image/jpeg,image/webp";
@@ -99,7 +100,7 @@ export function ThemeElementEditor({
                   })}
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 items-start gap-2">
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t("editor.theme.elements.textColor")}</Label>
                   <Input
@@ -109,15 +110,11 @@ export function ThemeElementEditor({
                     onChange={(e) => onStyleChange({ color: e.target.value })}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">{t("editor.theme.elements.bgColor")}</Label>
-                  <Input
-                    type="color"
-                    className="h-8 w-full p-1"
-                    value={toHexColor(element.style.backgroundColor)}
-                    onChange={(e) => onStyleChange({ backgroundColor: e.target.value })}
-                  />
-                </div>
+                <BackgroundColorField
+                  label={t("editor.theme.elements.bgColor")}
+                  value={element.style.backgroundColor}
+                  onChange={(backgroundColor) => onStyleChange({ backgroundColor })}
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
@@ -310,9 +307,4 @@ export function ThemeElementEditor({
       )}
     </aside>
   );
-}
-
-/** A color <input> needs a #rrggbb value; falls back to a neutral dark shade for rgba()/named/unset colors. */
-function toHexColor(value: string | undefined): string {
-  return value && /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#18181b";
 }

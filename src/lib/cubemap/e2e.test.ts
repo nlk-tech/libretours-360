@@ -678,6 +678,7 @@ const overlaysProject: TourProject = {
     showTitleOverlay: true,
     logoUrl: "",
     logoHeight: 32,
+    logoBackground: "transparent",
     overlays: [
       {
         id: "ov-text",
@@ -709,8 +710,19 @@ test(
   async () => {
     const overlaysDir = mkdtempSync(join(tmpdir(), "cubemap-overlays-"));
     try {
-      await exportCubemapTour(overlaysProject, folderSink(overlaysDir), deps);
+      await exportCubemapTour(overlaysProject, folderSink(overlaysDir), {
+        ...deps,
+        getLogoDataUrl: async () => overlayBadge,
+      });
       await open("", overlaysDir);
+
+      // theme.logoBackground "transparent": the logo bar has no panel behind it.
+      assert.deepEqual(
+        await page.eval(
+          `(() => { const s = getComputedStyle(document.getElementById("navbar")); return [s.display, s.backgroundColor, s.borderTopColor, s.backdropFilter]; })()`,
+        ),
+        ["flex", "rgba(0, 0, 0, 0)", "rgba(0, 0, 0, 0)", "none"],
+      );
 
       assert.equal(
         await page.eval(`document.querySelector(".theme-overlay-text").textContent`),

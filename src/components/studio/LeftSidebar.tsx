@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { hasNativeImport } from "@/lib/panorama-import";
 import { useFileDropZone } from "@/hooks/use-file-drop-zone";
 import { isBuiltInThemePreset } from "@/lib/theme-store";
+import { BackgroundColorField } from "./BackgroundColorField";
 
 /** Formats accepted by the logo/overlay image picker. */
 const LOGO_ACCEPT = "image/png,image/svg+xml,image/jpeg,image/webp";
@@ -539,6 +540,13 @@ export function LeftSidebar({
                   aria-label={t("editor.sidebar.theme.logoSize")}
                 />
               </div>
+            )}
+            {logoPreviewUrl && (
+              <BackgroundColorField
+                label={t("editor.sidebar.theme.logoBackground")}
+                value={theme.logoBackground}
+                onChange={(logoBackground) => onThemeChange({ logoBackground })}
+              />
             )}
             <p className="text-[10px] text-muted-foreground">
               {t("editor.sidebar.theme.logoUrlHint")}

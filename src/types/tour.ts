@@ -111,6 +111,12 @@ export interface Theme {
   logoUrl: string;
   /** Height of the logo in the navbar, px (LOGO_HEIGHT_MIN..LOGO_HEIGHT_MAX); its width follows the aspect ratio. */
   logoHeight: number;
+  /**
+   * Background of the logo bar: a CSS color, or "transparent" for none (no
+   * panel, border or blur). Unset in projects saved before it existed, which
+   * keep the original translucent dark panel.
+   */
+  logoBackground?: string | undefined;
   overlays: ThemeOverlayElement[];
 }
 
@@ -194,6 +200,7 @@ export const defaultTheme = (): Theme => ({
   showTitleOverlay: true,
   logoUrl: "",
   logoHeight: LOGO_HEIGHT_DEFAULT,
+  logoBackground: "transparent",
   overlays: [],
 });
 

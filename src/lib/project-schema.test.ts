@@ -63,6 +63,14 @@ test("keeps logoHeight as saved, clamping an out-of-range one instead of rejecti
   assert.equal(height(5000), 160);
 });
 
+test("keeps logoBackground as saved, and leaves it unset in older projects", () => {
+  const background = (theme: Record<string, unknown>) =>
+    validateOrMigrateProject(baseProject({ theme })).theme.logoBackground;
+  assert.equal(background({ logoBackground: "transparent" }), "transparent");
+  assert.equal(background({ logoBackground: "#336699" }), "#336699");
+  assert.equal(background({}), undefined);
+});
+
 test("accepts a local 'asset:' logo reference", () => {
   const project = validateOrMigrateProject(
     baseProject({ theme: { logoUrl: "asset:logo_ab12cd.png" } }),

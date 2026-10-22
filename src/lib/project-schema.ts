@@ -148,6 +148,7 @@ export const themeSchema = z.object({
   logoHeight: finiteNumber
     .default(LOGO_HEIGHT_DEFAULT)
     .transform((h) => Math.min(LOGO_HEIGHT_MAX, Math.max(LOGO_HEIGHT_MIN, h))),
+  logoBackground: z.string().optional(),
   overlays: z.array(themeOverlayElementSchema).default([]),
 });
 

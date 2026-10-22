@@ -116,6 +116,7 @@
         "dragDropImage": "Drag & drop an image here, or click to browse",
         "supportedFormats": "PNG, SVG, JPG or WebP",
         "logoPreview": "Logo preview",
+        "logoBackground": "Logo background",
         "logoSize": "Logo size",
         "logoUrlHint": "The image is stored inside the project: no external URL or network connection is needed in the exported viewer."
       },
@@ -184,6 +185,7 @@
         "variablesHint": "Available variables: {{sceneVar}}, {{projectVar}}",
         "textColor": "Text color",
         "bgColor": "Background color",
+        "transparent": "Transparent",
         "fontSize": "Font size",
         "borderRadius": "Border radius",
         "padding": "Padding",

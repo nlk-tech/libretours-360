@@ -63,6 +63,7 @@ export const BUILTIN_THEME_PRESETS: ThemePreset[] = [
       showTitleOverlay: false,
       logoUrl: "",
       logoHeight: LOGO_HEIGHT_DEFAULT,
+      logoBackground: "transparent",
       overlays: [],
     },
     createdAt: "",

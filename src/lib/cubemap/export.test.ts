@@ -149,6 +149,16 @@ test("buildTour carries theme.logoHeight through", () => {
   assert.equal(tour.theme.logoHeight, 72);
 });
 
+test("buildTour carries theme.logoBackground through, and omits it when unset", () => {
+  const base = project([scene("a", "Hall")]);
+  const build = (logoBackground?: string) =>
+    buildTour({ ...base, theme: { ...base.theme, logoBackground } }, [
+      { sceneId: "a", dir: "a", hasThumbnail: false },
+    ]).theme;
+  assert.equal(build("transparent").logoBackground, "transparent");
+  assert.ok(!("logoBackground" in build()));
+});
+
 test("buildTour carries theme.overlays through (defaults to the project's own, unresolved)", () => {
   const overlays = [overlay(), overlay({ id: "o2", type: "logo", content: "asset:foo.png" })];
   const p = project([scene("a", "Hall")], {

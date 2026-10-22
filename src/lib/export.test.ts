@@ -164,6 +164,25 @@ test("Web 3D: the logo takes theme.logoHeight and pushes the title down", async 
   assert.equal(els.get("title")!.style["top"], "110px");
 });
 
+test("Web 3D: theme.logoBackground replaces the default logo panel", async () => {
+  const navbar = async (logoBackground?: string) => {
+    const p = project();
+    p.theme = { ...p.theme, logoUrl: "data:x", logoBackground };
+    return (await runViewer(viewerHtml3D(p))).get("navbar")!.style;
+  };
+
+  const transparent = await navbar("transparent");
+  assert.equal(transparent["background"], "transparent");
+  assert.equal(transparent["borderColor"], "transparent");
+  assert.equal(transparent["backdropFilter"], "none");
+
+  const colored = await navbar("#336699");
+  assert.equal(colored["background"], "#336699");
+  assert.equal(colored["backdropFilter"], undefined);
+
+  assert.equal((await navbar())["background"], undefined);
+});
+
 test("Web 3D: showNavbar / showTitleOverlay turned off hide the logo bar and the title", async () => {
   const els = await runViewer(
     viewerHtml3D(

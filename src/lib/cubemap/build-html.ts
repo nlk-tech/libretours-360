@@ -49,6 +49,8 @@ export interface CubemapTour {
     logoUrl: string;
     /** Height of the logo, px (see Theme.logoHeight). Missing in tours exported before it existed. */
     logoHeight?: number;
+    /** Background of the logo bar (see Theme.logoBackground). Missing: the default dark panel. */
+    logoBackground?: string;
     /**
      * Custom overlay elements. "logo"/"image" elements carry their content as a
      * data: URL (or "" if it could not be resolved), same as logoUrl above.
@@ -116,6 +118,9 @@ export function buildTour(
       showNavbar: project.theme.showNavbar,
       logoUrl: logoDataUrl,
       logoHeight: project.theme.logoHeight,
+      ...(project.theme.logoBackground !== undefined && {
+        logoBackground: project.theme.logoBackground,
+      }),
       overlays,
     },
     showMeasurements: project.showMeasurements !== false,

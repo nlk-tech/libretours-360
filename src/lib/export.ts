@@ -478,7 +478,14 @@ ${minimapJs}
         logoEl.style.height = logoHeight + "px";
         logoEl.style.maxHeight = "none";
         logoEl.style.maxWidth = logoHeight * ${LOGO_MAX_ASPECT} + "px";
-        document.getElementById("navbar").classList.add("visible");
+        const navbarEl = document.getElementById("navbar");
+        if (typeof THEME.logoBackground === "string") {
+          // A custom background replaces the default panel; the border stays (transparent) so the layout does not shift.
+          navbarEl.style.background = THEME.logoBackground;
+          navbarEl.style.borderColor = "transparent";
+          if (THEME.logoBackground === "transparent") navbarEl.style.backdropFilter = "none";
+        }
+        navbarEl.classList.add("visible");
         titleEl.classList.add("with-navbar");
         titleEl.style.top = 78 + LOGO_EXTRA + "px";
       }
