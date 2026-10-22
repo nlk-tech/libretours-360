@@ -11,28 +11,38 @@ Built with [React](https://react.dev), [Photo Sphere Viewer](https://photo-spher
 
 ---
 
-## Features up to now
+## Features
 
-- **360° Panorama Viewer** — Navigate equirectangular images with drag-to-look, zoom via scroll, and smooth autorotation.
-- **Multi-scene Tours** — Link panoramas into a navigable tour with custom scene ordering.
+- **360° Panorama Viewer** — Navigate equirectangular images with drag-to-look and scroll zoom, from a 30° close-up out to a 110° wide view.
+- **Multi-scene Tours** — Link panoramas into a navigable tour. In the scene list you can:
+  - drag scenes into order with a grip handle;
+  - mark the start scene with a star (it moves to the top);
+  - rename a scene in place (double-click its name);
+  - see at a glance how many navigation hotspots, info points and measurements each scene has.
+- **Drag & Drop Import** — Drop panoramas onto the scene list, a logo onto the theme, a plan onto the floor plans tab, in the browser and in the desktop app alike. Long imports show their progress (file n of total).
 - **Interactive Hotspots** — Place clickable markers on panoramas. Three hotspot types:
   - **Door** — navigates to another scene
   - **Arrow** — directional navigation marker to another scene
   - **Info** — opens a popup with rich content written in Markdown (bold, italic, links, lists, code)
-- **Visual Tour Editor** — Drag hotspots directly on the panorama canvas, adjust yaw/pitch/zoom in the properties panel, set a per-scene default view (yaw/pitch/zoom), reorder scenes in the sidebar.
+
+  Navigation hotspots show a "Go to {scene}" tooltip, and can create the **return hotspot** in the target scene at the same time: you place it on a flat preview of the target panorama.
+- **Visual Tour Editor** — Drag hotspots directly on the panorama, fine-tune yaw/pitch/zoom in the properties panel, and set each scene's default view (yaw/pitch/zoom).
 - **Measurement Lines** — Draw a line between two points of a panorama and label it (for example `3,45 m`). Lines stay on the edges you drew them on from any view direction, can be shown or hidden with a **Measurements** button in the editor and in both exported tours, and are included in every export. See [docs/measurements.md](docs/measurements.md).
 - **Floor Plans** — Upload one plan per storey, put each scene on its plan and set which way it looks. The tours show a minimap in a corner of your choice, with an X/Y offset, with a cone that turns as you look around and dots that open the other scenes; a **Floor plan** button shows or hides it in the editor and in both exported tours. See [docs/floorplans.md](docs/floorplans.md).
 - **Theme Builder** — Brand your tours:
-  - Overlay elements (logo, image, text) anchored to the viewport with px/% offsets
+  - A logo with adjustable size and a background of your choice (a color, or transparent)
+  - Overlay elements (logo, image, text) anchored to the viewport with px/% offsets; text can have a colored or transparent background
   - A dedicated Theme Canvas mode with responsive preview, plus a live preview over the 3D panorama
   - A theme preset library, with import/export of `.lt-theme` files to reuse themes across projects
-- **Internationalization (i18n) and localization (l10n) ready** — See [Internationalization](#internationalization-i18n--localization-l10n).
+- **Safe Local Storage** — Projects never leave your machine: one folder per project on desktop, IndexedDB in the browser. Saves are atomic with a backup copy, every project is validated on load (older formats are migrated), and a damaged project is set aside instead of hiding the others.
+- **Internationalization (i18n) and localization (l10n) ready** — English and Italian, switchable at runtime. See [Internationalization](#internationalization-i18n--localization-l10n).
 - **Export Formats**:
   - **Web 3D** — Photo Sphere Viewer-powered tour with full 3D navigation (needs a webserver, due to browser CORS restrictions on `file://`)
   - **Standalone 3D** — CSS cubemap renderer: opens `index.html` directly via double-click/`file://`, no webserver needed
-  - **Project package (`.ltproj`)** — A zip with the project and all its images (panoramas, logo, overlay images): the format to back up a tour or move it between the browser and the desktop app
+  - **Project package (`.ltproj`)** — A zip with the project and all its images (panoramas, logo, overlay images, floor plans): the format to back up a tour or move it between the browser and the desktop app
   - **JSON** — Project data only, for sharing with other tools: images are referenced, not included
-- **Desktop App** — Native application for **macOS** (`.app`) and **Windows** (NSIS installer) via Tauri, with window controls, fullscreen support, and devtools. On Windows, WebGL crashes are caught and WebView2 falls back to software rendering.
+- **Desktop App** — Native application for **macOS** (`.app`) and **Windows** (NSIS installer, or a portable exe that needs no installation) via Tauri, with window controls, fullscreen support, and devtools. On Windows, WebGL crashes are caught and WebView2 falls back to software rendering.
+- **No Server Needed** — The web version is a static site: any web server can host it, and projects stay in each user's browser.
 
 ---
 
@@ -112,7 +122,7 @@ LibreTours 360 can be packaged as a native desktop application using Tauri.
 npm run tauri:build
 ```
 
-The packaged bundle (`.app` on macOS, NSIS installer on Windows) will be available in `src-tauri/target/release/bundle/`. Windows builds are also produced in CI by the `build-windows.yml` GitHub Actions workflow.
+The packaged bundle (`.app` on macOS, NSIS installer on Windows) will be available in `src-tauri/target/release/bundle/`. Windows builds are also produced in CI by the `build-windows.yml` GitHub Actions workflow (manual run): the NSIS installer and a portable `LibreTours 360.exe`. Both need WebView2, which Windows 10/11 already include.
 
 ### Development (Desktop)
 
@@ -232,9 +242,12 @@ src/
 │   │   ├── ThemeCanvas.tsx         # Theme Canvas 2D editing mode
 │   │   ├── ThemeOverlayCanvas.tsx  # Theme overlay rendering (also live over the 3D canvas)
 │   │   ├── ThemeElementEditor.tsx  # Overlay element inspector
-│   │   └── ReverseHotspotModal.tsx # Modal for hotspot details
+│   │   ├── BackgroundColorField.tsx # Color-or-transparent picker for theme backgrounds
+│   │   └── ReverseHotspotModal.tsx # Places the return hotspot on a flat preview of the target scene
 │   ├── ui/                         # Radix UI components (shadcn/ui style)
 │   └── LanguageSwitcher.tsx        # Runtime language switcher
+├── hooks/
+│   └── use-file-drop-zone.ts       # File drops: HTML5 in the browser, native event in the desktop app
 ├── lib/
 │   ├── export.ts                   # Web 3D export + JSON export
 │   ├── export-sink.ts              # Where tour exports go: a folder (desktop) or a zip (browser)
@@ -299,6 +312,12 @@ Hotspots are positioned on the 360° image using spherical coordinates:
 - **`pitch`** — Vertical rotation in degrees (-90 to 90, 0 = horizon)
 
 Each hotspot has a **type** (`door` and `arrow` for navigation to a target scene, `info` for a Markdown popup) and an optional **tooltip** that appears on hover.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ---
 

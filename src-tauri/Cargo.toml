@@ -1,9 +1,9 @@
 [package]
 name = "app"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
+version = "1.0.0"
+description = "LibreTours 360 — local-first 360° virtual tour editor"
+authors = ["LibreTours 360 contributors"]
+license = "GPL-3.0-or-later"
 repository = ""
 edition = "2021"
 rust-version = "1.77.2"
