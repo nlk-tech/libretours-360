@@ -20,13 +20,13 @@ Built with [React](https://react.dev), [Photo Sphere Viewer](https://photo-spher
   - rename a scene in place (double-click its name);
   - see at a glance how many navigation hotspots, info points and measurements each scene has.
 - **Drag & Drop Import** — Drop panoramas onto the scene list, a logo onto the theme, a plan onto the floor plans tab, in the browser and in the desktop app alike. Long imports show their progress (file n of total).
-- **Interactive Hotspots** — Place clickable markers on panoramas. Three hotspot types:
-  - **Door** — navigates to another scene
-  - **Arrow** — directional navigation marker to another scene
+- **Interactive Hotspots** — Place clickable markers on panoramas. Two hotspot types:
+  - **Navigation** — an arrow that takes you to another scene
   - **Info** — opens a popup with rich content written in Markdown (bold, italic, links, lists, code)
 
   Navigation hotspots show a "Go to {scene}" tooltip, and can create the **return hotspot** in the target scene at the same time: you place it on a flat preview of the target panorama.
-- **Visual Tour Editor** — Drag hotspots directly on the panorama, fine-tune yaw/pitch/zoom in the properties panel, and set each scene's default view (yaw/pitch/zoom).
+- **Visual Tour Editor** — Drag hotspots directly on the panorama, fine-tune yaw/pitch/zoom in the properties panel, and set each scene's default view (yaw/pitch/zoom). Right-click a navigation hotspot to jump to its target scene and keep editing there.
+- **Scene Graph** — A bird's-eye view of the whole tour, next to Edit and Preview: every scene is a card, every navigation hotspot an arrow. At a glance you see which scenes nobody can reach, which ones are dead ends, which links have no way back and which hotspots point nowhere. See [How the Scene Graph Works](#how-the-scene-graph-works).
 - **Measurement Lines** — Draw a line between two points of a panorama and label it (for example `3,45 m`). Lines stay on the edges you drew them on from any view direction, can be shown or hidden with a **Measurements** button in the editor and in both exported tours, and are included in every export. See [docs/measurements.md](docs/measurements.md).
 - **Floor Plans** — Upload one plan per storey, put each scene on its plan and set which way it looks. The tours show a minimap in a corner of your choice, with an X/Y offset, with a cone that turns as you look around and dots that open the other scenes; a **Floor plan** button shows or hides it in the editor and in both exported tours. See [docs/floorplans.md](docs/floorplans.md).
 - **Theme Builder** — Brand your tours:
@@ -41,7 +41,7 @@ Built with [React](https://react.dev), [Photo Sphere Viewer](https://photo-spher
   - **Standalone 3D** — CSS cubemap renderer: opens `index.html` directly via double-click/`file://`, no webserver needed
   - **Project package (`.ltproj`)** — A zip with the project and all its images (panoramas, logo, overlay images, floor plans): the format to back up a tour or move it between the browser and the desktop app
   - **JSON** — Project data only, for sharing with other tools: images are referenced, not included
-- **Desktop App** — Native application for **macOS** (`.app`), **Windows** (NSIS installer, or a portable exe that needs no installation) and **Linux** (AppImage) via Tauri, with window controls, fullscreen support, and devtools. On Windows, WebGL crashes are caught and WebView2 falls back to software rendering.
+- **Desktop App** — Native application for **macOS** (`.app`), **Windows** (NSIS installer, or a portable exe that needs no installation) and **Linux** (AppImage) via Tauri, with window controls, fullscreen support, and devtools. On Windows, WebGL crashes are caught and WebView2 falls back to software rendering. On macOS the menu bar follows the interface language, and its View menu switches between Edit, Preview and the scene graph.
 - **No Server Needed** — The web version is a static site: any web server can host it, and projects stay in each user's browser.
 
 ---
@@ -238,6 +238,8 @@ src/
 ├── components/
 │   ├── studio/
 │   │   ├── PanoCanvas.tsx          # 360° viewer with hotspots and measurement lines
+│   │   ├── SceneGraphCanvas.tsx    # Scene graph view: scenes, links, problems, pan/zoom/drag
+│   │   ├── ViewModeSwitch.tsx      # Edit / Preview / Graph switch over the canvas
 │   │   ├── FloorplanMinimap.tsx    # Floor plan minimap: navigation, placing scenes, view direction
 │   │   ├── FloorplansPanel.tsx     # Floor plans tab: plans, levels, current scene's floor
 │   │   ├── LeftSidebar.tsx         # Scenes, theme and floorplans tabs
@@ -257,6 +259,8 @@ src/
 │   ├── save-file.ts                # Single-file saves: "Save as" dialog (desktop) or download (browser)
 │   ├── measure-geometry.ts         # Great-circle math for measurement lines
 │   ├── floorplan-geometry.ts       # View direction math for floor plans
+│   ├── scene-graph.ts              # Scene graph: links, reachability, force-directed layout
+│   ├── app-menu.ts                 # Localized macOS menu bar (View > Edit / Preview / Scene graph)
 │   ├── floorplan/                  # Floor plan minimap of the exported tours + image export
 │   ├── project-package.ts          # .ltproj project package (project + images) export/import
 │   ├── cubemap/                    # Standalone 3D export: panorama → cube faces, CSS 3D viewer, no webserver
@@ -314,7 +318,46 @@ Hotspots are positioned on the 360° image using spherical coordinates:
 - **`yaw`** — Horizontal rotation in degrees (-180 to 180, 0 = center)
 - **`pitch`** — Vertical rotation in degrees (-90 to 90, 0 = horizon)
 
-Each hotspot has a **type** (`door` and `arrow` for navigation to a target scene, `info` for a Markdown popup) and an optional **tooltip** that appears on hover.
+Each hotspot has a **type** (`nav` for navigation to a target scene, `info` for a Markdown popup) and an optional **tooltip** that appears on hover. Projects saved with the older `door` and `arrow` types are migrated to `nav` when they are opened.
+
+---
+
+## How the Scene Graph Works
+
+A tour is a network: scenes are the places, navigation hotspots the ways from one place to the next. While you edit one panorama at a time that network is invisible, and it is easy to forget a way back, leave a room with no exit, or delete a scene that other hotspots still point to. The scene graph draws the whole network on one screen.
+
+Open it with **Graph** in the switch at the top right of the canvas (next to **Edit** and **Preview**), or from **View › Scene graph** in the macOS menu bar.
+
+**What you see**
+
+- **Scenes** are cards with their thumbnail and name. The start scene carries a green **Start** badge; the scene open in the editor has a violet border.
+- **Links** are arrows, one per pair of scenes, whatever the number of hotspots between them:
+  - a **solid line with two arrowheads** means you can go both ways;
+  - a **dashed amber line with one arrowhead** is one-way: often a missing return hotspot.
+
+  Hover a link to read the tooltips of the hotspots behind it; hover a scene to highlight its links.
+
+**What it checks**
+
+The panel at the top left counts the problems, and each scene with a problem gets a **!** badge (hover it for details):
+
+| Problem | Meaning |
+|---|---|
+| Unreachable (red) | No path of navigation hotspots leads here from the start scene: visitors will never see it. |
+| Dead end (amber) | No hotspot leads out of this scene to another one. |
+| One-way link (amber) | A → B exists, B → A does not. |
+| Hotspot without target (red) | A navigation hotspot with no target scene, or whose target was deleted. |
+
+Reachability follows the arrows: a scene that only links *to* the tour, with nothing linking to it, is unreachable.
+
+**Working with it**
+
+- **Click** a scene to select it: the properties panel shows it, ready to edit.
+- **Double-click** a scene to open it, back in Edit or Preview, whichever you came from.
+- **Drag** a card to move it, drag the background to pan, scroll to zoom.
+- **Fit** brings the whole graph into view; **Rearrange** recomputes the layout from scratch.
+
+The layout is force-directed: linked scenes pull each other closer, all scenes push each other apart. It is deterministic, so the same tour always gets the same picture, and scenes added later find a place without moving the ones you already arranged. Positions last while the project is open and are not saved with it.
 
 ---
 
@@ -330,6 +373,7 @@ Planned features are described in [`docs/future-plans/`](docs/future-plans/READM
 
 - Web deploy (Docker / Apache)
 - Localization of the Web 3D export viewer
+- Scene graph over the floor plans: scenes drawn where they sit on each storey
 
 ---
 

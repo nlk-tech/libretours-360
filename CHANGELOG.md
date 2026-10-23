@@ -9,7 +9,9 @@ First stable release: a local-first editor for 360° virtual tours, in the brows
 
 ### Editor
 - Multi-scene tours: drag to reorder, star the start scene, rename scenes in place, see per-scene counts of hotspots, info points and measurements.
-- Door, arrow and info hotspots; info popups in Markdown; navigation hotspots can create their return hotspot in the target scene.
+- Navigation and info hotspots; info popups in Markdown; navigation hotspots can create their return hotspot in the target scene. Projects with the older door and arrow hotspots are migrated to navigation hotspots.
+- Right-click a navigation hotspot to open its target scene.
+- Scene graph, a third canvas mode next to Edit and Preview: scenes as cards, navigation hotspots as one- or two-way arrows, with unreachable scenes, dead ends, one-way links and hotspots without a target flagged. Click selects a scene, double-click opens it; drag, pan, zoom, fit and rearrange.
 - Per-scene default view (yaw, pitch, zoom); zoom from 30° out to a 110° field of view.
 - Measurement lines with free-text labels, drawn as great-circle arcs that stay on the edges.
 - Multi-floor plans with a minimap, scene positions and a view cone that follows the camera.
@@ -30,6 +32,7 @@ First stable release: a local-first editor for 360° virtual tours, in the brows
 ### Desktop
 - macOS app; Windows NSIS installer and portable exe; Linux AppImage. Windows and Linux builds run in CI.
 - WebGL crash protection with a WebView2 software rendering fallback on Windows.
+- macOS menu bar in the interface language, with View › Edit / Preview / Scene graph.
 
 ### Project
 - Started on Lovable, now fully independent: a plain Vite single-page app with no Lovable tooling, libraries or services, and no server-side rendering.
