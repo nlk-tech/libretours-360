@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LibreTours 360</title>
+  <meta name="description" content="An open-source, local-first editor and viewer for creating interactive 360° virtual tours. Desktop app for macOS, Windows and Linux, or right in your browser.">
+  <meta property="og:title" content="LibreTours 360">
+  <meta property="og:description" content="Create, edit and export interactive 360° virtual tours — locally, with no server and no account.">
+  <meta property="og:image" content="icon.png">
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <img class="logo" src="icon.png" alt="" width="128" height="128">
+      <h1>LibreTours 360</h1>
+      <p class="tagline">An open-source, local-first editor for interactive 360° virtual tours.</p>
+      <p class="lead">Drop in your panoramas, link the scenes with hotspots, brand the tour with a theme and export a viewer you can share. Your projects never leave your machine.</p>
+      <div class="actions">
+        <a class="btn primary" href="#download">Download</a>
+        <a class="btn" href="https://github.com/wishmerhill/libretours-360">Source on GitHub</a>
+      </div>
+      <p class="version" id="version" hidden></p>
+    </div>
+  </header>
+
+  <main>
+    <section class="wrap">
+      <h2>Features</h2>
+      <div class="grid">
+        <article>
+          <h3>Multi-scene tours</h3>
+          <p>Link equirectangular panoramas into a navigable tour. Reorder scenes by dragging, pick the start scene, rename in place.</p>
+        </article>
+        <article>
+          <h3>Interactive hotspots</h3>
+          <p>Navigation arrows to other scenes, with an optional return hotspot, and info points with Markdown content. Drag them right on the panorama.</p>
+        </article>
+        <article>
+          <h3>Scene graph</h3>
+          <p>A bird's-eye view of the whole tour: spot unreachable scenes, dead ends, one-way links and hotspots that point nowhere.</p>
+        </article>
+        <article>
+          <h3>Floor plans</h3>
+          <p>One plan per storey, with a minimap in the exported tour: a cone turns as you look around, and dots open the other scenes.</p>
+        </article>
+        <article>
+          <h3>Measurement lines</h3>
+          <p>Draw a labelled line between two points of a panorama. It stays on the edges you drew it on from any direction.</p>
+        </article>
+        <article>
+          <h3>Theme builder</h3>
+          <p>Logo, overlay images and text anchored to the viewport, a live preview over the panorama, and reusable <code>.lt-theme</code> presets.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Screenshots go in site/img/ (PNG, 1600×1000 or another 16:10 size).
+         Until a file exists its figure shows an empty frame. -->
+    <section class="wrap">
+      <h2>Screenshots <span class="badge">coming soon</span></h2>
+      <div class="shots">
+        <figure class="shot wide">
+          <img src="img/editor.png" alt="The tour editor with hotspots on a panorama" loading="lazy">
+          <figcaption>The editor: scenes, hotspots and properties side by side</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/hotspots.png" alt="A navigation hotspot and an info popup" loading="lazy">
+          <figcaption>Navigation hotspots and info points</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/scene-graph.png" alt="The scene graph view" loading="lazy">
+          <figcaption>The scene graph</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/floor-plan.png" alt="A tour with the floor plan minimap" loading="lazy">
+          <figcaption>Floor plan minimap</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/measurements.png" alt="Measurement lines on a panorama" loading="lazy">
+          <figcaption>Measurement lines</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/theme.png" alt="The theme builder" loading="lazy">
+          <figcaption>Theme builder</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="img/export.png" alt="An exported tour open in the browser" loading="lazy">
+          <figcaption>An exported tour</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <h2>Export anywhere</h2>
+      <div class="grid two">
+        <article>
+          <h3>Web 3D</h3>
+          <p>A Photo Sphere Viewer tour with full 3D navigation, ready to upload to any web server.</p>
+        </article>
+        <article>
+          <h3>Standalone 3D</h3>
+          <p>A folder that opens with a double-click on <code>index.html</code>: no server, no install, works from a USB stick.</p>
+        </article>
+        <article>
+          <h3>Project package</h3>
+          <p>A <code>.ltproj</code> file with the project and every image, to back it up or move it between the browser and the desktop app.</p>
+        </article>
+        <article>
+          <h3>JSON</h3>
+          <p>The project data alone, to use with other tools.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap" id="download">
+      <h2>Download</h2>
+      <div class="downloads">
+        <a class="dl" data-os="windows" href="https://github.com/wishmerhill/libretours-360/releases/latest">
+          <strong>Windows</strong>
+          <span>Portable, no installation</span>
+        </a>
+        <a class="dl" data-os="macos" href="https://github.com/wishmerhill/libretours-360/releases/latest">
+          <strong>macOS</strong>
+          <span>Apple Silicon</span>
+        </a>
+        <a class="dl" data-os="linux" href="https://github.com/wishmerhill/libretours-360/releases/latest">
+          <strong>Linux</strong>
+          <span>AppImage</span>
+        </a>
+      </div>
+      <p class="note">The builds are not code-signed yet: Windows SmartScreen and macOS Gatekeeper may ask you to confirm before the first launch. Every release is listed on <a href="https://github.com/wishmerhill/libretours-360/releases">GitHub Releases</a>, and you can always <a href="https://github.com/wishmerhill/libretours-360#getting-started">build from source</a>.</p>
+    </section>
+
+    <section class="wrap">
+      <h2>Local-first, open source</h2>
+      <p>No account, no cloud, no tracking. On the desktop each project is a folder on your disk; in the browser it lives in your own browser storage. LibreTours 360 is free software under the GPL-3.0 license, available in English and Italian.</p>
+      <p>Built with <a href="https://react.dev">React</a>, <a href="https://photo-sphere-viewer.js.org/">Photo Sphere Viewer</a> and <a href="https://v2.tauri.app/">Tauri</a>.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>LibreTours 360 · <a href="https://github.com/wishmerhill/libretours-360/blob/main/LICENSE">GPL-3.0</a> · <a href="https://github.com/wishmerhill/libretours-360/blob/main/CHANGELOG.md">Changelog</a></p>
+      <p class="small">This project is vibe-coded: written by an AI agent from natural-language prompts.</p>
+    </div>
+  </footer>
+
+  <script>
+    // A screenshot not added yet shows an empty frame instead of a broken image.
+    for (const img of document.querySelectorAll('.shot img')) {
+      const markMissing = () => img.closest('.shot').classList.add('missing');
+      if (img.complete && img.naturalWidth === 0) markMissing();
+      else img.addEventListener('error', markMissing);
+    }
+
+    // Point the download buttons straight at the assets of the latest release.
+    // Without network access or with no matching asset, they keep linking to the release page.
+    const patterns = {
+      windows: /windows/i,
+      macos: /macos|darwin|\.dmg$/i,
+      linux: /linux|\.appimage$/i,
+    };
+    fetch('https://api.github.com/repos/wishmerhill/libretours-360/releases/latest')
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((release) => {
+        const version = document.getElementById('version');
+        version.textContent = `Latest release: ${release.tag_name}`;
+        version.hidden = false;
+        for (const link of document.querySelectorAll('.dl')) {
+          const asset = release.assets.find((a) => patterns[link.dataset.os].test(a.name));
+          if (asset) link.href = asset.browser_download_url;
+          else link.querySelector('span').textContent = 'See releases';
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
