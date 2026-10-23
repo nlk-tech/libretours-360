@@ -443,7 +443,7 @@ export function defineStorageSuite(harness: Harness): void {
                 hotspots: [
                   {
                     id: "h1",
-                    type: "door" as const,
+                    type: "nav" as const,
                     pitch: 0.1,
                     yaw: 1.5,
                     tooltip: "Go",
@@ -499,7 +499,7 @@ export function defineStorageSuite(harness: Harness): void {
             {
               ...scene("sa", `tauri:${pano1}`),
               hotspots: [
-                { id: "h1", type: "door", pitch: 0, yaw: 1, tooltip: "", targetSceneId: "sb" },
+                { id: "h1", type: "nav", pitch: 0, yaw: 1, tooltip: "", targetSceneId: "sb" },
               ],
             },
             scene("sb", `tauri:${pano2}`),

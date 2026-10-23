@@ -472,7 +472,7 @@ function Studio() {
       getHotspotDefaults().autoTooltipOnTarget &&
       nextTargetId &&
       nextTargetId !== hotspot.targetSceneId &&
-      (type === "door" || type === "arrow") &&
+      type === "nav" &&
       patch.tooltip === undefined
     ) {
       const sceneName = (id: string | null | undefined) =>
@@ -966,7 +966,7 @@ function Studio() {
     if (!activeSceneId) return;
     const hotspot: Hotspot = {
       id: uid("hs"),
-      type: "door",
+      type: "nav",
       pitch,
       yaw,
       tooltip: t("editor.defaults.newHotspotTooltip"),
@@ -1048,7 +1048,7 @@ function Studio() {
 
     const reverseHotspot: Hotspot = {
       id: uid("hs"),
-      type: "door",
+      type: "nav",
       pitch,
       yaw,
       tooltip: t("editor.defaults.returnToScene", { sceneName: currentSceneName }),

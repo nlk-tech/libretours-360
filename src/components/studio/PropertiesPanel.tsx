@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Trash2, DoorOpen, Info, MoveRight, ArrowLeftRight, Target, Ruler } from "lucide-react";
+import { Trash2, Info, MoveRight, ArrowLeftRight, Target, Ruler } from "lucide-react";
 import type { Hotspot, HotspotType, MeasurePoint, Measurement, Scene } from "@/types/tour";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,7 +96,7 @@ export function PropertiesPanel({
               <Label className="text-xs">{t("editor.properties.hotspotsInScene")}</Label>
               <div className="space-y-2">
                 {scene.hotspots.map((h) => {
-                  const Icon = h.type === "door" ? DoorOpen : h.type === "info" ? Info : MoveRight;
+                  const Icon = h.type === "info" ? Info : MoveRight;
                   return (
                     <div
                       key={h.id}
@@ -167,8 +167,7 @@ export function PropertiesPanel({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="door">{t("editor.properties.typeDoor")}</SelectItem>
-                <SelectItem value="arrow">{t("editor.properties.typeArrow")}</SelectItem>
+                <SelectItem value="nav">{t("editor.properties.typeNav")}</SelectItem>
                 <SelectItem value="info">{t("editor.properties.typeInfo")}</SelectItem>
               </SelectContent>
             </Select>

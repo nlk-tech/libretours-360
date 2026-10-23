@@ -640,15 +640,11 @@
   // ─── Hotspots ────────────────────────────────────────────────────────────
 
   var ICONS = {
-    door: {
-      color: "#10b981",
-      svg: '<path d="M10 13a2 2 0 1 0 4 0 2 2 0 0 0-4 0"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/><path d="M17 17.5v-11"/>',
-    },
     info: {
       color: "#6366f1",
       svg: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
     },
-    arrow: {
+    nav: {
       color: "#4f46e5",
       svg: '<circle cx="12" cy="12" r="10"/><path d="m12 8 4 4-4 4"/><path d="M8 12h8"/>',
     },
@@ -671,7 +667,7 @@
     hotspotLayer.textContent = "";
     hotspotEls = [];
     (scene.hotspots || []).forEach(function (hotspot) {
-      var icon = ICONS[hotspot.type] || ICONS.arrow;
+      var icon = ICONS[hotspot.type] || ICONS.nav;
       var el = document.createElement("button");
       el.type = "button";
       el.className = "hs";

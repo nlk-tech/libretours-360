@@ -54,7 +54,7 @@ const assetRefUrl = z
 
 const hotspotSchema = z.object({
   id: z.string().min(1),
-  type: z.enum(["door", "info", "arrow"]),
+  type: z.enum(["nav", "info"]),
   pitch: finiteNumber,
   yaw: finiteNumber,
   tooltip: z.string().default(""),
@@ -334,6 +334,33 @@ function migrateProject(raw: Record<string, unknown>): Record<string, unknown> {
   if (version < 3) {
     data = { ...data, schemaVersion: 3 };
     version = 3;
+  }
+
+  // v3 -> v4: the "door" and "arrow" hotspot types (same behaviour, different
+  // icon) become a single "nav" type. Malformed scenes/hotspots are left as
+  // they are for the schema to report.
+  if (version < 4) {
+    const scenes = data["scenes"];
+    if (Array.isArray(scenes)) {
+      data = {
+        ...data,
+        scenes: scenes.map((scene: unknown) => {
+          if (!scene || typeof scene !== "object") return scene;
+          const hotspots = (scene as Record<string, unknown>)["hotspots"];
+          if (!Array.isArray(hotspots)) return scene;
+          return {
+            ...scene,
+            hotspots: hotspots.map((h: unknown) => {
+              if (!h || typeof h !== "object") return h;
+              const type = (h as Record<string, unknown>)["type"];
+              return type === "door" || type === "arrow" ? { ...h, type: "nav" } : h;
+            }),
+          };
+        }),
+      };
+    }
+    data = { ...data, schemaVersion: 4 };
+    version = 4;
   }
 
   return data;

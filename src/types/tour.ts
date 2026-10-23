@@ -1,4 +1,4 @@
-export type HotspotType = "door" | "info" | "arrow";
+export type HotspotType = "nav" | "info";
 
 export interface Hotspot {
   id: string;
@@ -169,7 +169,7 @@ export const DEFAULT_FLOORPLAN_OFFSET: FloorplanOffset = { x: 20, y: 20, unit: "
  * Version of the on-disk project format. Bump it when the shape of TourProject
  * changes and add a step to `migrateProject` in lib/project-schema.ts.
  */
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export interface TourProject {
   /** On-disk format version, see CURRENT_SCHEMA_VERSION. */

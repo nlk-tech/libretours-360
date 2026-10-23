@@ -379,12 +379,51 @@ test("migrates a v2 project: floor plans gain level 0, scenes are not placed, mi
       scenes: [{ id: "s1", name: "S", panoramaUrl: "https://example.com/a.jpg" }],
     }),
   );
-  assert.equal(project.schemaVersion, 3);
+  assert.equal(project.schemaVersion, CURRENT_SCHEMA_VERSION);
   assert.equal(project.floorplans[0]?.level, 0);
   assert.equal(project.scenes[0]?.floorplanPosition, null);
   assert.equal(project.showFloorplan, true);
   assert.equal(project.floorplanCorner, "bottom-left");
   assert.deepEqual(project.floorplanOffset, { x: 20, y: 20, unit: "px" });
+});
+
+// ─── Unified navigation hotspots (schema v4) ───────────────────────────────
+
+test("migrates a v3 project: door and arrow hotspots become nav, info stays", () => {
+  const hotspot = (id: string, type: string) => ({ id, type, pitch: 0, yaw: 0, tooltip: "" });
+  const project = validateOrMigrateProject(
+    baseProject({
+      schemaVersion: 3,
+      scenes: [
+        {
+          id: "s1",
+          name: "S",
+          panoramaUrl: "https://example.com/a.jpg",
+          hotspots: [hotspot("h1", "door"), hotspot("h2", "arrow"), hotspot("h3", "info")],
+        },
+      ],
+    }),
+  );
+  assert.equal(project.schemaVersion, 4);
+  assert.deepEqual(
+    project.scenes[0]?.hotspots.map((h) => h.type),
+    ["nav", "nav", "info"],
+  );
+});
+
+test("rejects door/arrow hotspot types in a current-version project", () => {
+  const scene = (type: string) => ({
+    scenes: [
+      {
+        id: "s1",
+        name: "S",
+        panoramaUrl: "https://example.com/a.jpg",
+        hotspots: [{ id: "h1", type, pitch: 0, yaw: 0, tooltip: "" }],
+      },
+    ],
+  });
+  assert.ok(rejects(baseProject(scene("door"))).length > 0);
+  assert.ok(rejects(baseProject(scene("arrow"))).length > 0);
 });
 
 test("keeps floor plans, placements and minimap settings as saved", () => {

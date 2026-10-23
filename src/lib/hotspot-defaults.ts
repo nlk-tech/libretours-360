@@ -8,7 +8,7 @@
  */
 export interface HotspotDefaults {
   /**
-   * When a door or arrow hotspot gets a target scene, set its tooltip to
+   * When a navigation hotspot gets a target scene, set its tooltip to
    * "Go to {scene}" - unless the user already typed a custom tooltip.
    */
   autoTooltipOnTarget: boolean;

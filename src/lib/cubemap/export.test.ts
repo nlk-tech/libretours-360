@@ -27,7 +27,7 @@ const assets = { js: viewerJs, css: viewerCss, minimap };
 
 const hotspot = (over: Partial<Hotspot> = {}): Hotspot => ({
   id: "h1",
-  type: "arrow",
+  type: "nav",
   pitch: 0,
   yaw: 20,
   tooltip: "Go",

@@ -92,7 +92,7 @@ const deps: ExportDeps = {
 };
 
 const hs = (over: Partial<Hotspot> & Pick<Hotspot, "id" | "yaw" | "pitch">): Hotspot => ({
-  type: "arrow",
+  type: "nav",
   tooltip: over.id,
   targetSceneId: null,
   ...over,
@@ -126,7 +126,7 @@ const project: TourProject = {
       floorplanPosition: null,
       hotspots: [
         hs({ id: "nav", yaw: 45, pitch: 10, targetSceneId: "b", tooltip: "To the kitchen" }),
-        hs({ id: "nav-low", type: "door", yaw: 45, pitch: -10, targetSceneId: "b" }),
+        hs({ id: "nav-low", type: "nav", yaw: 45, pitch: -10, targetSceneId: "b" }),
         hs({
           id: "pole",
           type: "info",
@@ -585,7 +585,7 @@ test("wheel zooms (limits 30..110 degrees) and arrow keys turn the view", { skip
   assert.ok(Math.abs(turned.x - expected.x) < 2, `got x=${turned.x} expected x=${expected.x}`);
 });
 
-test("clicking a door hotspot changes scene; the scene list switches back", { skip }, async () => {
+test("clicking a navigation hotspot changes scene; the scene list switches back", { skip }, async () => {
   await open("#yaw=0&pitch=0&fov=90");
   const nav = (await hotspotCenters())[NAV]!;
   await page.mouse("mousePressed", nav.x, nav.y);
