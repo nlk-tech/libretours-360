@@ -338,7 +338,9 @@
         "landmarkHint": "Turn the panorama so a landmark (a door, a window) is in the centre, then click that landmark on the plan · Esc to cancel",
         "notPlacedHint": "This scene is not on this floor plan yet: use Place here."
       },
-      "graph": "Graph"
+      "graph": "Graph",
+      "hideProperties": "Hide the properties panel",
+      "showProperties": "Show the properties panel"
     },
     "graph": {
       "title": "Scene graph",

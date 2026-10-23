@@ -35,13 +35,14 @@ export function ViewModeSwitch({ value, onChange, graphDisabled, className }: Pr
           disabled={mode === "graph" && graphDisabled}
           onClick={() => mode !== value && onChange(mode)}
           aria-pressed={mode === value}
+          aria-label={t(label)}
+          title={t(label)}
           className={cn(
-            "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all disabled:pointer-events-none disabled:opacity-40",
+            "flex items-center justify-center rounded-full px-3 py-1.5 transition-all disabled:pointer-events-none disabled:opacity-40",
             mode === value ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white",
           )}
         >
-          <Icon className="h-3.5 w-3.5" />
-          {t(label)}
+          <Icon className="h-4 w-4" />
         </button>
       ))}
     </div>

@@ -11,6 +11,8 @@ import {
   FileArchive,
   FolderOutput,
   MapPin,
+  PanelRightClose,
+  PanelRightOpen,
   Ruler,
   Save,
 } from "lucide-react";
@@ -130,6 +132,8 @@ function Studio() {
   // Scene graph view: open state and node positions (session only, not saved
   // with the project), kept here so they survive closing and reopening it.
   const [showGraph, setShowGraph] = useState(false);
+  // The properties panel can be collapsed by the user, in Edit and in the graph.
+  const [propertiesHidden, setPropertiesHidden] = useState(false);
   const [graphPositions, setGraphPositions] = useState<Record<string, GraphPoint>>({});
   const [themePresets, setThemePresets] = useState<ThemePreset[]>([]);
 
@@ -1077,6 +1081,8 @@ function Studio() {
   // back to editing or previewing.
   const viewMode: ViewMode = showGraph ? "graph" : mode;
   const graphAvailable = (project?.scenes.length ?? 0) > 0;
+  // Shown while editing and in the graph, whichever mode the graph was opened from.
+  const propertiesAvailable = mode === "editor" || showGraph;
   // The theme tab has its own canvas over the viewer: no switching there.
   const viewSwitchAvailable = activeSidebarTab !== "theme";
   const changeViewMode = useCallback((next: ViewMode) => {
@@ -1092,6 +1098,12 @@ function Studio() {
       setSelectedHotspotId(null);
       setSelectedMeasurementId(null);
     }
+  }, []);
+  // Double click on a scene, in the graph or in the scene list while the graph is shown.
+  const openSceneFromGraph = useCallback((sceneId: string) => {
+    setActiveSceneId(sceneId);
+    setSelectedHotspotId(null);
+    setShowGraph(false);
   }, []);
 
   // View > Edit / Preview / Scene graph in the macOS menu bar mirror the switch.
@@ -1208,6 +1220,7 @@ function Studio() {
             setActiveSceneId(sceneId);
             setSelectedHotspotId(null);
           }}
+          onOpenScene={showGraph ? openSceneFromGraph : undefined}
           onDeleteScene={handleDeleteScene}
           onReorderScene={handleReorderScene}
           onSetInitialScene={handleSetInitialScene}
@@ -1370,22 +1383,38 @@ function Studio() {
                   setActiveSceneId(sceneId);
                   setSelectedHotspotId(null);
                 }}
-                onOpenScene={(sceneId) => {
-                  setActiveSceneId(sceneId);
-                  setSelectedHotspotId(null);
-                  setShowGraph(false);
-                }}
+                onOpenScene={openSceneFromGraph}
               />
             </div>
           )}
 
           {viewSwitchAvailable && (
-            <ViewModeSwitch
-              value={viewMode}
-              onChange={changeViewMode}
-              graphDisabled={!graphAvailable}
-              className="absolute right-4 top-4 z-30"
-            />
+            <div className="absolute right-4 top-4 z-30 flex items-center gap-2">
+              <ViewModeSwitch
+                value={viewMode}
+                onChange={changeViewMode}
+                graphDisabled={!graphAvailable}
+              />
+              {propertiesAvailable && (
+                <button
+                  type="button"
+                  onClick={() => setPropertiesHidden((v) => !v)}
+                  title={
+                    propertiesHidden
+                      ? t("editor.viewer.showProperties")
+                      : t("editor.viewer.hideProperties")
+                  }
+                  aria-pressed={!propertiesHidden}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700/50 bg-slate-900/80 text-slate-400 backdrop-blur-md transition-colors hover:text-white"
+                >
+                  {propertiesHidden ? (
+                    <PanelRightOpen className="h-4 w-4" />
+                  ) : (
+                    <PanelRightClose className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+            </div>
           )}
 
           {/* Theme Canvas mode: the 3D viewer stays mounted (avoids a costly re-init)
@@ -1406,67 +1435,69 @@ function Studio() {
           )}
         </div>
 
-        {mode === "editor" &&
-          (activeSidebarTab === "theme" ? (
-            <ThemeElementEditor
-              projectId={project.id}
-              element={selectedOverlay}
-              onChange={(patch) => selectedOverlay && patchOverlay(selectedOverlay.id, patch)}
-              onStyleChange={(patch) =>
-                selectedOverlay && patchOverlayStyle(selectedOverlay.id, patch)
-              }
-              onImageFileSelected={(file) =>
-                selectedOverlay && handleOverlayImageFile(selectedOverlay.id, file)
-              }
-              onDelete={() => selectedOverlay && handleOverlayDelete(selectedOverlay.id)}
-            />
-          ) : (
-            <PropertiesPanel
-              scene={activeScene}
-              scenes={project.scenes}
-              hotspot={selectedHotspot}
-              measurement={selectedMeasurement}
-              onMeasurementChange={(patch) =>
-                selectedMeasurement && updateMeasurement(selectedMeasurement.id, patch)
-              }
-              onSelectMeasurement={selectMeasurement}
-              onDeleteMeasurement={deleteMeasurement}
-              showMeasurementsInExport={project.showMeasurements}
-              onShowMeasurementsInExportChange={(value) =>
-                update((draft) => ({ ...draft, showMeasurements: value }))
-              }
-              onSceneChange={(patch) => activeSceneId && patchScene(activeSceneId, patch)}
-              onHotspotChange={(patch) =>
-                selectedHotspot && handleHotspotChange(selectedHotspot, patch)
-              }
-              onDeleteSelectedHotspot={() => {
-                if (!selectedHotspot || !activeSceneId) return;
-                update((draft) => ({
-                  ...draft,
-                  scenes: draft.scenes.map((s) =>
-                    s.id === activeSceneId
-                      ? { ...s, hotspots: s.hotspots.filter((h) => h.id !== selectedHotspot.id) }
-                      : s,
-                  ),
-                }));
-                setSelectedHotspotId(null);
-              }}
-              onSelectHotspot={selectHotspot}
-              onDeleteHotspot={(id) => {
-                if (!activeSceneId) return;
-                update((draft) => ({
-                  ...draft,
-                  scenes: draft.scenes.map((s) =>
-                    s.id === activeSceneId
-                      ? { ...s, hotspots: s.hotspots.filter((h) => h.id !== id) }
-                      : s,
-                  ),
-                }));
-                if (selectedHotspotId === id) setSelectedHotspotId(null);
-              }}
-              onCreateReverseHotspot={handleCreateReverseHotspot}
-            />
-          ))}
+        {activeSidebarTab === "theme"
+          ? mode === "editor" && (
+              <ThemeElementEditor
+                projectId={project.id}
+                element={selectedOverlay}
+                onChange={(patch) => selectedOverlay && patchOverlay(selectedOverlay.id, patch)}
+                onStyleChange={(patch) =>
+                  selectedOverlay && patchOverlayStyle(selectedOverlay.id, patch)
+                }
+                onImageFileSelected={(file) =>
+                  selectedOverlay && handleOverlayImageFile(selectedOverlay.id, file)
+                }
+                onDelete={() => selectedOverlay && handleOverlayDelete(selectedOverlay.id)}
+              />
+            )
+          : propertiesAvailable &&
+            !propertiesHidden && (
+              <PropertiesPanel
+                scene={activeScene}
+                scenes={project.scenes}
+                hotspot={selectedHotspot}
+                measurement={selectedMeasurement}
+                onMeasurementChange={(patch) =>
+                  selectedMeasurement && updateMeasurement(selectedMeasurement.id, patch)
+                }
+                onSelectMeasurement={selectMeasurement}
+                onDeleteMeasurement={deleteMeasurement}
+                showMeasurementsInExport={project.showMeasurements}
+                onShowMeasurementsInExportChange={(value) =>
+                  update((draft) => ({ ...draft, showMeasurements: value }))
+                }
+                onSceneChange={(patch) => activeSceneId && patchScene(activeSceneId, patch)}
+                onHotspotChange={(patch) =>
+                  selectedHotspot && handleHotspotChange(selectedHotspot, patch)
+                }
+                onDeleteSelectedHotspot={() => {
+                  if (!selectedHotspot || !activeSceneId) return;
+                  update((draft) => ({
+                    ...draft,
+                    scenes: draft.scenes.map((s) =>
+                      s.id === activeSceneId
+                        ? { ...s, hotspots: s.hotspots.filter((h) => h.id !== selectedHotspot.id) }
+                        : s,
+                    ),
+                  }));
+                  setSelectedHotspotId(null);
+                }}
+                onSelectHotspot={selectHotspot}
+                onDeleteHotspot={(id) => {
+                  if (!activeSceneId) return;
+                  update((draft) => ({
+                    ...draft,
+                    scenes: draft.scenes.map((s) =>
+                      s.id === activeSceneId
+                        ? { ...s, hotspots: s.hotspots.filter((h) => h.id !== id) }
+                        : s,
+                    ),
+                  }));
+                  if (selectedHotspotId === id) setSelectedHotspotId(null);
+                }}
+                onCreateReverseHotspot={handleCreateReverseHotspot}
+              />
+            )}
 
         {reverseHotspotTargetId && (
           <ReverseHotspotModal

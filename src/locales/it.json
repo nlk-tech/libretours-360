@@ -338,7 +338,9 @@
         "landmarkHint": "Ruota il panorama in modo da avere un riferimento (una porta, una finestra) al centro, poi clicca lo stesso riferimento sulla planimetria · Esc per annullare",
         "notPlacedHint": "Questa scena non è ancora su questa planimetria: usa Posiziona qui."
       },
-      "graph": "Grafo"
+      "graph": "Grafo",
+      "hideProperties": "Nascondi il pannello delle proprietà",
+      "showProperties": "Mostra il pannello delle proprietà"
     },
     "graph": {
       "title": "Grafo delle scene",

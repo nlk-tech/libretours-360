@@ -66,6 +66,8 @@ interface Props {
   onOverlayReorder: (id: string, direction: "up" | "down") => void;
   onOverlayDelete: (id: string) => void;
   onSelectScene: (id: string) => void;
+  /** Double click on a scene row (outside its name and buttons); unset when it does nothing. */
+  onOpenScene?: ((id: string) => void) | undefined;
   onDeleteScene: (id: string) => void;
   /** Moves a scene to `toIndex` (index in the list after the scene has been removed). */
   onReorderScene: (id: string, toIndex: number) => void;
@@ -150,6 +152,7 @@ export function LeftSidebar({
   onOverlayReorder,
   onOverlayDelete,
   onSelectScene,
+  onOpenScene,
   onDeleteScene,
   onReorderScene,
   onSetInitialScene,
@@ -290,6 +293,12 @@ export function LeftSidebar({
                     sceneRowRefs.current[scene.id] = el;
                   }}
                   onClick={() => onSelectScene(scene.id)}
+                  onDoubleClick={(e) => {
+                    // The name renames on double click; the grip and buttons have their own job.
+                    if ((e.target as HTMLElement).closest("button, input, [data-scene-grip]"))
+                      return;
+                    onOpenScene?.(scene.id);
+                  }}
                   className={cn(
                     "group relative flex cursor-pointer items-center gap-2 rounded-lg border p-2 pl-1 transition-colors",
                     scene.id === activeSceneId
@@ -305,6 +314,7 @@ export function LeftSidebar({
                     <div className="pointer-events-none absolute inset-x-0 -bottom-[5px] h-0.5 rounded-full bg-primary" />
                   )}
                   <div
+                    data-scene-grip
                     title={t("editor.sidebar.reorderScene")}
                     className={cn(
                       "flex h-10 w-4 shrink-0 touch-none items-center justify-center text-muted-foreground hover:text-foreground",
