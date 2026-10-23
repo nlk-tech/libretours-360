@@ -7,6 +7,11 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
+    env:
+      # Code signing through SignPath (see docs/code-signing-policy.md) runs only once
+      # the SIGNPATH_API_TOKEN secret exists; until then the builds are unsigned.
+      SIGNPATH_ENABLED: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,14 +28,69 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # The app exe is built first and bundled later, so that the installer
+      # packs the signed exe.
       - name: Build Frontend & Tauri App
-        run: npm run tauri:build
+        run: npm run tauri:build -- --no-bundle
 
-      - name: Prepare portable build
+      - name: Upload unsigned app exe
+        if: env.SIGNPATH_ENABLED == 'true'
+        id: unsigned-exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-app-exe
+          path: src-tauri/target/release/app.exe
+
+      - name: Sign app exe
+        if: env.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'libretours-360' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          # Release signing waits for a manual approval on SignPath.
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-exe
+
+      - name: Use signed app exe
+        if: env.SIGNPATH_ENABLED == 'true'
+        shell: pwsh
+        run: Copy-Item signed-exe/app.exe src-tauri/target/release/app.exe -Force
+
+      - name: Bundle NSIS installer
+        run: npx tauri bundle --bundles nsis
+
+      - name: Upload unsigned installer
+        if: env.SIGNPATH_ENABLED == 'true'
+        id: unsigned-installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: src-tauri/target/release/bundle/nsis/*.exe
+
+      - name: Sign installer
+        if: env.SIGNPATH_ENABLED == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'libretours-360' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed-installer
+
+      - name: Prepare portable build and installer
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path portable | Out-Null
+          New-Item -ItemType Directory -Force -Path portable, installer | Out-Null
           Copy-Item src-tauri/target/release/app.exe "portable/LibreTours 360.exe"
+          $source = if ($env:SIGNPATH_ENABLED -eq 'true') { 'signed-installer/*.exe' } else { 'src-tauri/target/release/bundle/nsis/*.exe' }
+          Copy-Item $source installer/
 
       # GitHub always downloads artifacts as a zip: this one is the portable app,
       # the next one the NSIS installer.
@@ -44,4 +104,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LibreTours-Studio-Windows-x64
-          path: src-tauri/target/release/bundle/nsis/*.exe
+          path: installer/*.exe

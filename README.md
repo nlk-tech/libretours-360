@@ -123,7 +123,7 @@ LibreTours 360 can be packaged as a native desktop application using Tauri.
 npm run tauri:build
 ```
 
-The packaged bundle (`.app` on macOS, NSIS installer on Windows) will be available in `src-tauri/target/release/bundle/`. Windows builds are also produced in CI by the `build-windows.yml` GitHub Actions workflow (manual run): the NSIS installer and a portable `LibreTours 360.exe`. Both need WebView2, which Windows 10/11 already include.
+The packaged bundle (`.app` on macOS, NSIS installer on Windows) will be available in `src-tauri/target/release/bundle/`. Windows builds are also produced in CI by the `build-windows.yml` GitHub Actions workflow (manual run): the NSIS installer and a portable `LibreTours 360.exe`. Both need WebView2, which Windows 10/11 already include. Signing of the Windows builds through SignPath is described in the [code signing policy](docs/code-signing-policy.md).
 
 On Linux, build an AppImage with `npm run tauri:build -- --bundles appimage` (it lands in `src-tauri/target/release/bundle/appimage/`). The `build-linux.yml` workflow (manual run) builds it in CI on Ubuntu 22.04, so it runs on that and newer distributions. Running an AppImage needs FUSE 2 (the `libfuse2` package on Debian/Ubuntu and openSUSE).
 
@@ -351,6 +351,12 @@ Contributions are welcome! Here's how you can help:
 - `src/components/ui/` holds only the [shadcn/ui](https://ui.shadcn.com) components in use; add another with `npx shadcn add <name>` (settings in `components.json`).
 - **No hardcoded UI strings** — add new strings to every dictionary in `src/locales/`.
 - Run `npm test` and test all export formats (Web 3D, Standalone 3D, `.ltproj`, JSON) when making changes to the viewer or data pipeline.
+
+---
+
+## Code Signing Policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org) (application pending: the Windows builds are unsigned until it is approved). Team roles, what is signed and the privacy policy: [docs/code-signing-policy.md](docs/code-signing-policy.md).
 
 ---
 
