@@ -8,7 +8,6 @@ import {
   LayoutGrid,
   Maximize2,
   MoveRight,
-  Pencil,
   Crosshair,
   Ruler,
   RotateCcw,
@@ -124,7 +123,6 @@ interface Props {
   onAddHotspot: (pitch: number, yaw: number) => void;
   onMoveHotspot: (id: string, pitch: number, yaw: number) => void;
   onNavigate: (sceneId: string) => void;
-  onModeChange: (mode: "editor" | "preview") => void;
   /** Called with the camera's current yaw/pitch (degrees) and zoom (multiplier) when the user captures it as the scene's default view. */
   onSetDefaultView: (view: { yaw: number; pitch: number; zoom: number }) => void;
   /** Measurement tool active: clicks place the two endpoints of a new line. */
@@ -152,7 +150,6 @@ export function PanoCanvas({
   onAddHotspot,
   onMoveHotspot,
   onNavigate,
-  onModeChange,
   onSetDefaultView,
   measuring,
   onCancelMeasuring,
@@ -1087,28 +1084,6 @@ export function PanoCanvas({
           </div>
         </div>
       )}
-
-      {/* Floating Edit/Preview toggle */}
-      <div className="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full border border-slate-700/50 bg-slate-900/80 p-1 backdrop-blur-md">
-        {(["editor", "preview"] as const).map((value) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => onModeChange(value)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-all",
-              mode === value ? "bg-cyan-400 text-slate-950" : "text-slate-400 hover:text-white",
-            )}
-          >
-            {value === "editor" ? (
-              <Pencil className="h-3.5 w-3.5" />
-            ) : (
-              <Eye className="h-3.5 w-3.5" />
-            )}
-            {value === "editor" ? t("editor.viewer.edit") : t("editor.viewer.preview")}
-          </button>
-        ))}
-      </div>
 
       {/* Captures yaw/pitch/zoom into the scene's saved default view (project.json) */}
       {mode === "editor" && scene && (

@@ -27,6 +27,45 @@
       "goHome": "Go home"
     }
   },
+  "menu": {
+    "app": {
+      "about": "About {{name}}",
+      "services": "Services",
+      "hide": "Hide {{name}}",
+      "hideOthers": "Hide Others",
+      "showAll": "Show All",
+      "quit": "Quit {{name}}"
+    },
+    "file": {
+      "title": "File",
+      "closeWindow": "Close Window"
+    },
+    "edit": {
+      "title": "Edit",
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All"
+    },
+    "view": {
+      "title": "View",
+      "editor": "Edit",
+      "preview": "Preview",
+      "sceneGraph": "Scene Graph",
+      "fullscreen": "Toggle Full Screen"
+    },
+    "window": {
+      "title": "Window",
+      "minimize": "Minimize",
+      "zoom": "Zoom",
+      "bringAllToFront": "Bring All to Front"
+    },
+    "help": {
+      "title": "Help"
+    }
+  },
   "dashboard": {
     "brand": "LibreTours 360",
     "importProject": "Import project",
@@ -298,7 +337,33 @@
         "placeHint": "Click the point of the plan where the scene was taken · Esc to cancel",
         "landmarkHint": "Turn the panorama so a landmark (a door, a window) is in the centre, then click that landmark on the plan · Esc to cancel",
         "notPlacedHint": "This scene is not on this floor plan yet: use Place here."
-      }
+      },
+      "graph": "Graph"
+    },
+    "graph": {
+      "title": "Scene graph",
+      "summary": "{{scenes}} scenes · {{links}} links",
+      "unreachable_one": "{{count}} unreachable scene",
+      "unreachable_other": "{{count}} unreachable scenes",
+      "deadEnds_one": "{{count}} dead-end scene",
+      "deadEnds_other": "{{count}} dead-end scenes",
+      "oneWay_one": "{{count}} one-way link",
+      "oneWay_other": "{{count}} one-way links",
+      "broken_one": "{{count}} hotspot without target",
+      "broken_other": "{{count}} hotspots without target",
+      "nodeUnreachable": "Not reachable from the initial scene",
+      "nodeDeadEnd": "No hotspot leads to another scene",
+      "nodeBroken_one": "{{count}} navigation hotspot without target",
+      "nodeBroken_other": "{{count}} navigation hotspots without target",
+      "openHint": "Double-click to open the scene",
+      "start": "Start",
+      "fit": "Fit",
+      "relayout": "Rearrange",
+      "relayoutHint": "Recompute the layout of all scenes",
+      "empty": "No scenes in the project",
+      "legendBoth": "Both ways",
+      "legendOneWay": "One way",
+      "hint": "Click: select · double-click: open · drag to move"
     },
     "defaults": {
       "newHotspotTooltip": "New hotspot",

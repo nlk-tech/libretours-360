@@ -69,6 +69,10 @@ import { PanoCanvas } from "@/components/studio/PanoCanvas";
 import { FloorplanMinimap } from "@/components/studio/FloorplanMinimap";
 import { FloorplansPanel } from "@/components/studio/FloorplansPanel";
 import { ThemeCanvas } from "@/components/studio/ThemeCanvas";
+import { SceneGraphCanvas } from "@/components/studio/SceneGraphCanvas";
+import type { GraphPoint } from "@/lib/scene-graph";
+import { setViewMenuState } from "@/lib/app-menu";
+import { ViewModeSwitch, type ViewMode } from "@/components/studio/ViewModeSwitch";
 import { ThemeOverlayCanvas } from "@/components/studio/ThemeOverlayCanvas";
 import { ThemeElementEditor } from "@/components/studio/ThemeElementEditor";
 import { ReverseHotspotModal } from "@/components/studio/ReverseHotspotModal";
@@ -123,6 +127,10 @@ function Studio() {
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>("scenes");
   const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null);
   const [reverseHotspotTargetId, setReverseHotspotTargetId] = useState<string | null>(null);
+  // Scene graph view: open state and node positions (session only, not saved
+  // with the project), kept here so they survive closing and reopening it.
+  const [showGraph, setShowGraph] = useState(false);
+  const [graphPositions, setGraphPositions] = useState<Record<string, GraphPoint>>({});
   const [themePresets, setThemePresets] = useState<ThemePreset[]>([]);
 
   // Always points at the latest project state, so saves triggered from timers
@@ -1065,6 +1073,41 @@ function Studio() {
     toast.success(t("editor.toasts.returnHotspotCreated"));
   };
 
+  // The graph covers the viewer and keeps `mode` as it was, so leaving it goes
+  // back to editing or previewing.
+  const viewMode: ViewMode = showGraph ? "graph" : mode;
+  const graphAvailable = (project?.scenes.length ?? 0) > 0;
+  // The theme tab has its own canvas over the viewer: no switching there.
+  const viewSwitchAvailable = activeSidebarTab !== "theme";
+  const changeViewMode = useCallback((next: ViewMode) => {
+    setPlacing(false);
+    setMeasuring(false);
+    if (next === "graph") {
+      setShowGraph(true);
+      return;
+    }
+    setShowGraph(false);
+    setMode(next);
+    if (next === "preview") {
+      setSelectedHotspotId(null);
+      setSelectedMeasurementId(null);
+    }
+  }, []);
+
+  // View > Edit / Preview / Scene graph in the macOS menu bar mirror the switch.
+  useEffect(() => {
+    setViewMenuState({
+      active: viewMode,
+      enabled: {
+        editor: viewSwitchAvailable,
+        preview: viewSwitchAvailable,
+        graph: viewSwitchAvailable && graphAvailable,
+      },
+      onSelect: changeViewMode,
+    });
+  }, [viewMode, viewSwitchAvailable, graphAvailable, changeViewMode]);
+  useEffect(() => () => setViewMenuState(null), []);
+
   if (!loaded) return <div className="min-h-screen bg-background" />;
 
   if (!project) {
@@ -1106,7 +1149,7 @@ function Studio() {
           <Button
             size="sm"
             variant={placing ? "default" : "secondary"}
-            disabled={mode !== "editor" || !activeScene}
+            disabled={viewMode !== "editor" || !activeScene}
             onClick={() => {
               setPlacing((p) => !p);
               setMeasuring(false);
@@ -1117,7 +1160,7 @@ function Studio() {
           <Button
             size="sm"
             variant={measuring ? "default" : "secondary"}
-            disabled={mode !== "editor" || !activeScene}
+            disabled={viewMode !== "editor" || !activeScene}
             onClick={toggleMeasuring}
           >
             <Ruler className="mr-1.5 h-3.5 w-3.5" /> {t("editor.header.measure")}
@@ -1285,15 +1328,6 @@ function Studio() {
               });
               toast.success(t("editor.toasts.defaultViewSaved"));
             }}
-            onModeChange={(newMode) => {
-              setMode(newMode);
-              setPlacing(false);
-              setMeasuring(false);
-              if (newMode === "preview") {
-                setSelectedHotspotId(null);
-                setSelectedMeasurementId(null);
-              }
-            }}
           />
 
           {showFloorplan && activeSidebarTab !== "theme" && activeScenePlaced && (
@@ -1320,6 +1354,37 @@ function Studio() {
                 setSelectedHotspotId(null);
               }}
               onPlaceScene={setScenePlacement}
+            />
+          )}
+
+          {showGraph && activeSidebarTab !== "theme" && (
+            <div className="absolute inset-0 z-20">
+              <SceneGraphCanvas
+                scenes={project.scenes}
+                sceneUrls={sceneUrls}
+                initialSceneId={project.initialSceneId}
+                activeSceneId={activeSceneId}
+                positions={graphPositions}
+                onPositionsChange={setGraphPositions}
+                onSelectScene={(sceneId) => {
+                  setActiveSceneId(sceneId);
+                  setSelectedHotspotId(null);
+                }}
+                onOpenScene={(sceneId) => {
+                  setActiveSceneId(sceneId);
+                  setSelectedHotspotId(null);
+                  setShowGraph(false);
+                }}
+              />
+            </div>
+          )}
+
+          {viewSwitchAvailable && (
+            <ViewModeSwitch
+              value={viewMode}
+              onChange={changeViewMode}
+              graphDisabled={!graphAvailable}
+              className="absolute right-4 top-4 z-30"
             />
           )}
 

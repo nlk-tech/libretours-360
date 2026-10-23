@@ -27,6 +27,45 @@
       "goHome": "Torna alla home"
     }
   },
+  "menu": {
+    "app": {
+      "about": "Informazioni su {{name}}",
+      "services": "Servizi",
+      "hide": "Nascondi {{name}}",
+      "hideOthers": "Nascondi altre",
+      "showAll": "Mostra tutte",
+      "quit": "Esci da {{name}}"
+    },
+    "file": {
+      "title": "File",
+      "closeWindow": "Chiudi finestra"
+    },
+    "edit": {
+      "title": "Modifica",
+      "undo": "Annulla",
+      "redo": "Ripeti",
+      "cut": "Taglia",
+      "copy": "Copia",
+      "paste": "Incolla",
+      "selectAll": "Seleziona tutto"
+    },
+    "view": {
+      "title": "Vista",
+      "editor": "Modifica",
+      "preview": "Anteprima",
+      "sceneGraph": "Grafo delle scene",
+      "fullscreen": "Attiva/disattiva modalità a tutto schermo"
+    },
+    "window": {
+      "title": "Finestra",
+      "minimize": "Contrai",
+      "zoom": "Ridimensiona",
+      "bringAllToFront": "Porta tutto in primo piano"
+    },
+    "help": {
+      "title": "Aiuto"
+    }
+  },
   "dashboard": {
     "brand": "LibreTours 360",
     "importProject": "Importa progetto",
@@ -298,7 +337,33 @@
         "placeHint": "Clicca il punto della planimetria in cui è stata scattata la scena · Esc per annullare",
         "landmarkHint": "Ruota il panorama in modo da avere un riferimento (una porta, una finestra) al centro, poi clicca lo stesso riferimento sulla planimetria · Esc per annullare",
         "notPlacedHint": "Questa scena non è ancora su questa planimetria: usa Posiziona qui."
-      }
+      },
+      "graph": "Grafo"
+    },
+    "graph": {
+      "title": "Grafo delle scene",
+      "summary": "{{scenes}} scene · {{links}} collegamenti",
+      "unreachable_one": "{{count}} scena irraggiungibile",
+      "unreachable_other": "{{count}} scene irraggiungibili",
+      "deadEnds_one": "{{count}} scena senza uscita",
+      "deadEnds_other": "{{count}} scene senza uscita",
+      "oneWay_one": "{{count}} collegamento a senso unico",
+      "oneWay_other": "{{count}} collegamenti a senso unico",
+      "broken_one": "{{count}} hotspot senza destinazione",
+      "broken_other": "{{count}} hotspot senza destinazione",
+      "nodeUnreachable": "Non raggiungibile dalla scena iniziale",
+      "nodeDeadEnd": "Nessun hotspot porta ad altre scene",
+      "nodeBroken_one": "{{count}} hotspot di navigazione senza destinazione",
+      "nodeBroken_other": "{{count}} hotspot di navigazione senza destinazione",
+      "openHint": "Doppio click per aprire la scena",
+      "start": "Inizio",
+      "fit": "Adatta",
+      "relayout": "Ridisponi",
+      "relayoutHint": "Ricalcola la disposizione di tutte le scene",
+      "empty": "Nessuna scena nel progetto",
+      "legendBoth": "Andata e ritorno",
+      "legendOneWay": "Senso unico",
+      "hint": "Click: seleziona · doppio click: apri · trascina per spostare"
     },
     "defaults": {
       "newHotspotTooltip": "Nuovo hotspot",
