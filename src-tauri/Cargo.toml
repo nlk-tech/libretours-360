@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.0.0"
+version = "0.9.0"
 description = "LibreTours 360 — local-first 360° virtual tour editor"
 authors = ["LibreTours 360 contributors"]
 license = "GPL-3.0-or-later"

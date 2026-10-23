@@ -3,15 +3,16 @@
 All notable changes to LibreTours 360 are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] — Unreleased
+## [0.9.0] — Unreleased
 
-First stable release: a local-first editor for 360° virtual tours, in the browser and as a desktop app for macOS, Windows and Linux.
+First public release: a local-first editor for 360° virtual tours, in the browser and as a desktop app for macOS, Windows and Linux.
 
 ### Editor
 - Multi-scene tours: drag to reorder, star the start scene, rename scenes in place, see per-scene counts of hotspots, info points and measurements.
 - Navigation and info hotspots; info popups in Markdown; navigation hotspots can create their return hotspot in the target scene. Projects with the older door and arrow hotspots are migrated to navigation hotspots.
 - Right-click a navigation hotspot to open its target scene.
-- Scene graph, a third canvas mode next to Edit and Preview: scenes as cards, navigation hotspots as one- or two-way arrows, with unreachable scenes, dead ends, one-way links and hotspots without a target flagged. Click selects a scene, double-click opens it; drag, pan, zoom, fit and rearrange.
+- Scene graph, a third canvas mode next to Edit and Preview: scenes as cards, navigation hotspots as one- or two-way arrows, with unreachable scenes, dead ends, one-way links and hotspots without a target flagged. Click selects a scene, in the graph or in the scene list, and double-click opens it; drag, pan, zoom, fit and rearrange. The scene properties stay on the side, with a button to hide them.
+- Edit / Preview / Scene graph switch as icons, with the name on hover.
 - Per-scene default view (yaw, pitch, zoom); zoom from 30° out to a 110° field of view.
 - Measurement lines with free-text labels, drawn as great-circle arcs that stay on the edges.
 - Multi-floor plans with a minimap, scene positions and a view cone that follows the camera.
