@@ -513,8 +513,20 @@ export function PanoCanvas({
               if (modeRef.current === "editor") {
                 el.style.cursor = "grab";
 
+                // Click destro: apre la scena di destinazione, per proseguire
+                // l'editing senza cercarla a mano nella lista delle scene
+                el.addEventListener("contextmenu", (e: MouseEvent) => {
+                  if (modeRef.current !== "editor") return;
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const hs = sceneRef.current?.hotspots.find((h) => h.id === m.id);
+                  if (hs?.type !== "info" && hs?.targetSceneId) onNavigate(hs.targetSceneId);
+                });
+
                 el.addEventListener("mousedown", (e: MouseEvent) => {
                   if (modeRef.current !== "editor") return;
+                  // Solo il tasto sinistro seleziona e trascina
+                  if (e.button !== 0) return;
                   e.stopPropagation();
                   e.preventDefault();
 
