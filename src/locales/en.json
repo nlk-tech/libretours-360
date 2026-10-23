@@ -30,6 +30,7 @@
   "menu": {
     "app": {
       "about": "About {{name}}",
+      "aboutCredits": "A local-first editor for 360° virtual tours: your projects stay on your computer.\n\nFree software, released under the GNU GPL v3 or later.\n\ngithub.com/wishmerhill/libretours-360",
       "services": "Services",
       "hide": "Hide {{name}}",
       "hideOthers": "Hide Others",

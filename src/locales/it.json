@@ -30,6 +30,7 @@
   "menu": {
     "app": {
       "about": "Informazioni su {{name}}",
+      "aboutCredits": "Editor di tour virtuali a 360°, in locale: i progetti restano sul tuo computer.\n\nSoftware libero, distribuito sotto licenza GNU GPL v3 o successiva.\n\ngithub.com/wishmerhill/libretours-360",
       "services": "Servizi",
       "hide": "Nascondi {{name}}",
       "hideOthers": "Nascondi altre",

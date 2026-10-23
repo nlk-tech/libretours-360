@@ -40,12 +40,14 @@ let installed = false;
 
 /** The product name (tauri.conf.json), not translated. */
 const APP_NAME = "LibreTours 360";
+const COPYRIGHT = "Copyright © 2026 LibreTours 360 contributors";
 
 const isMac = () =>
   typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent);
 
 async function buildMenu(): Promise<void> {
   const { Menu, Submenu, PredefinedMenuItem, CheckMenuItem } = await import("@tauri-apps/api/menu");
+  const { getVersion } = await import("@tauri-apps/api/app");
   const t = i18n.t.bind(i18n);
   const name = APP_NAME;
   const separator = () => PredefinedMenuItem.new({ item: "Separator" });
@@ -85,7 +87,15 @@ async function buildMenu(): Promise<void> {
         text: name,
         items: [
           await PredefinedMenuItem.new({
-            item: { About: null },
+            // macOS shows name, version, copyright and credits; the rest is not supported.
+            item: {
+              About: {
+                name,
+                version: await getVersion(),
+                copyright: COPYRIGHT,
+                credits: t("menu.app.aboutCredits"),
+              },
+            },
             text: t("menu.app.about", { name }),
           }),
           await separator(),
