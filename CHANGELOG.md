@@ -3,7 +3,15 @@
 All notable changes to LibreTours 360 are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.9.0] — Unreleased
+## [0.9.1] — 2026-10-23
+
+### Fixed
+- Dragging a hotspot in the editor moved it in the opposite direction to the mouse on Windows (and too fast or too slow at some zoom levels). The hotspot now follows the pointer exactly.
+
+### Desktop
+- The Windows build is distributed as a portable zip only; the installer is no longer published for now.
+
+## [0.9.0] — 2026-10-23
 
 First public release: a local-first editor for 360° virtual tours, in the browser and as a desktop app for macOS, Windows and Linux.
 
