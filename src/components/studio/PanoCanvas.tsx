@@ -439,19 +439,11 @@ export function PanoCanvas({
     const dragState: {
       markerId: string | null;
       dragging: boolean;
-      initYawRad: number;
-      initPitchRad: number;
-      mouseStartX: number;
-      mouseStartY: number;
       finalYawRad?: number;
       finalPitchRad?: number;
     } = {
       markerId: null,
       dragging: false,
-      initYawRad: 0,
-      initPitchRad: 0,
-      mouseStartX: 0,
-      mouseStartY: 0,
     };
 
     const syncMarkers = () => {
@@ -540,50 +532,30 @@ export function PanoCanvas({
                     // ignore
                   }
 
-                  // Leggi posizione corrente dalla mappa (ref, sempre aggiornata)
-                  const saved = markerPositionsRef.current.get(m.id);
-                  const initYawRad = saved?.yaw ?? 0;
-                  const initPitchRad = saved?.pitch ?? 0;
-
                   // Salva stato iniziale
                   dragState.markerId = m.id;
                   dragState.dragging = true;
-                  dragState.initYawRad = initYawRad;
-                  dragState.initPitchRad = initPitchRad;
-                  dragState.mouseStartX = e.clientX;
-                  dragState.mouseStartY = e.clientY;
-
-                  // Sensibilità: 0.3° per pixel di movimento mouse
-                  const radPerPx = (0.3 * Math.PI) / 180;
 
                   const onMouseMove = (ev: MouseEvent) => {
-                    if (!dragState.dragging || !dragState.markerId || !containerRef.current) return;
-
-                    const dx = ev.clientX - dragState.mouseStartX;
-                    const dy = ev.clientY - dragState.mouseStartY;
-
-                    const containerWidth = containerRef.current.clientWidth || 1000;
-                    const containerHeight = containerRef.current.clientHeight || 600;
-
+                    if (!dragState.dragging || !dragState.markerId) return;
                     const viewer = viewerRef.current;
                     if (!viewer) return;
 
-                    // 1. Recupera il FOV verticale REALE corrente di PSV v5 (in radianti)
-                    const vFovRad = viewer.state?.vFov ?? Math.PI / 3; // Fallback ~60°
-
-                    // 2. Calcolo trigonomerico dell'angolo di spostamento esatto
-                    const halfH = containerHeight / 2;
-                    const tanHalfVFov = Math.tan(vFovRad / 2);
-
-                    const yawDelta = Math.atan((dx / halfH) * tanHalfVFov);
-                    const pitchDelta = Math.atan((dy / halfH) * tanHalfVFov);
-
-                    // 3. Nuove coordinate traslate
-                    const newYawRad = dragState.initYawRad + yawDelta;
-                    const newPitchRad = Math.max(
-                      -Math.PI / 2 + 0.01,
-                      Math.min(Math.PI / 2 - 0.01, dragState.initPitchRad - pitchDelta),
-                    );
+                    // Direzione esatta sotto il puntatore. Yaw resta in 0..2π come
+                    // lo restituisce PSV, la stessa convenzione dei click.
+                    let pos: { yaw: number; pitch: number };
+                    try {
+                      const rect = (viewer.container as HTMLElement).getBoundingClientRect();
+                      pos = viewer.dataHelper.viewerCoordsToSphericalCoords({
+                        x: ev.clientX - rect.left,
+                        y: ev.clientY - rect.top,
+                      });
+                    } catch {
+                      return;
+                    }
+                    if (!Number.isFinite(pos?.yaw) || !Number.isFinite(pos?.pitch)) return;
+                    const newYawRad = pos.yaw;
+                    const newPitchRad = pos.pitch;
 
                     try {
                       markersRef.current?.updateMarker?.({
