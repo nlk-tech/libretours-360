@@ -1,7 +1,7 @@
 # LibreTours 360
 ## An open-source, local-first editor and viewer for creating interactive 360° virtual tours.
 
-**Create, edit and export interactive 360° virtual tours — locally in your browser, or as a native desktop app for macOS and Windows.**
+**Create, edit and export interactive 360° virtual tours — locally in your browser, or as a native desktop app for macOS, Windows and Linux.**
 
 LibreTours 360 is a local-first virtual tour editor. Drop in your 360° panoramas, link scenes together with clickable hotspots, brand the tour with a theme, preview the result with smooth equirectangular navigation, and export a standalone viewer for sharing.
 
@@ -41,7 +41,7 @@ Built with [React](https://react.dev), [Photo Sphere Viewer](https://photo-spher
   - **Standalone 3D** — CSS cubemap renderer: opens `index.html` directly via double-click/`file://`, no webserver needed
   - **Project package (`.ltproj`)** — A zip with the project and all its images (panoramas, logo, overlay images, floor plans): the format to back up a tour or move it between the browser and the desktop app
   - **JSON** — Project data only, for sharing with other tools: images are referenced, not included
-- **Desktop App** — Native application for **macOS** (`.app`) and **Windows** (NSIS installer, or a portable exe that needs no installation) via Tauri, with window controls, fullscreen support, and devtools. On Windows, WebGL crashes are caught and WebView2 falls back to software rendering.
+- **Desktop App** — Native application for **macOS** (`.app`), **Windows** (NSIS installer, or a portable exe that needs no installation) and **Linux** (AppImage) via Tauri, with window controls, fullscreen support, and devtools. On Windows, WebGL crashes are caught and WebView2 falls back to software rendering.
 - **No Server Needed** — The web version is a static site: any web server can host it, and projects stay in each user's browser.
 
 ---
@@ -106,7 +106,7 @@ npm run preview
 
 ---
 
-## Desktop Build (macOS / Windows)
+## Desktop Build (macOS / Windows / Linux)
 
 LibreTours 360 can be packaged as a native desktop application using Tauri.
 
@@ -115,6 +115,7 @@ LibreTours 360 can be packaged as a native desktop application using Tauri.
 - [Rust](https://www.rust-lang.org/tools/install) (install via `rustup`)
 - macOS: Xcode Command Line Tools (`xcode-select --install`)
 - Windows: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and WebView2 (preinstalled on Windows 10/11)
+- Linux: WebKitGTK 4.1 and the other [Tauri system dependencies](https://v2.tauri.app/start/prerequisites/#linux), e.g. on Debian/Ubuntu `sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`
 
 ### Build the Desktop App
 
@@ -123,6 +124,8 @@ npm run tauri:build
 ```
 
 The packaged bundle (`.app` on macOS, NSIS installer on Windows) will be available in `src-tauri/target/release/bundle/`. Windows builds are also produced in CI by the `build-windows.yml` GitHub Actions workflow (manual run): the NSIS installer and a portable `LibreTours 360.exe`. Both need WebView2, which Windows 10/11 already include.
+
+On Linux, build an AppImage with `npm run tauri:build -- --bundles appimage` (it lands in `src-tauri/target/release/bundle/appimage/`). The `build-linux.yml` workflow (manual run) builds it in CI on Ubuntu 22.04, so it runs on that and newer distributions. Running an AppImage needs FUSE 2 (the `libfuse2` package on Debian/Ubuntu and openSUSE).
 
 ### Development (Desktop)
 

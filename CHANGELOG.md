@@ -5,7 +5,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [1.0.0] — Unreleased
 
-First stable release: a local-first editor for 360° virtual tours, in the browser and as a desktop app for macOS and Windows.
+First stable release: a local-first editor for 360° virtual tours, in the browser and as a desktop app for macOS, Windows and Linux.
 
 ### Editor
 - Multi-scene tours: drag to reorder, star the start scene, rename scenes in place, see per-scene counts of hotspots, info points and measurements.
@@ -28,7 +28,7 @@ First stable release: a local-first editor for 360° virtual tours, in the brows
 - Atomic saves with a backup copy, schema validation with migrations, quarantine of damaged projects, safe file names.
 
 ### Desktop
-- macOS app; Windows NSIS installer and portable exe, built in CI.
+- macOS app; Windows NSIS installer and portable exe; Linux AppImage. Windows and Linux builds run in CI.
 - WebGL crash protection with a WebView2 software rendering fallback on Windows.
 
 ### Project
