@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="76 76 340 360">
+  <defs>
+    <radialGradient id="cone" cx="256" cy="256" r="128" gradientUnits="userSpaceOnUse"><stop offset=".2" stop-color="#ffb627"/><stop offset="1" stop-color="#ffd76e"/></radialGradient>
+  </defs>
+  <path d="M256 256 L188.2 147.5 A128 128 0 0 1 323.8 147.5 Z" fill="url(#cone)"/>
+  <path d="M402.1 289.7 A150 150 0 1 1 331 126.1" fill="none" stroke="#5f64f8" stroke-width="28" stroke-linecap="round"/>
+  <path d="M384.6 171 L352.9 100 L309.1 152 Z" fill="#5f64f8" stroke="#5f64f8" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="256" cy="256" r="32" fill="#5f64f8"/>
+</svg>
