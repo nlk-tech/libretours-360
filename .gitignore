@@ -34,3 +34,4 @@ dist/
 dist-tauri/
 .output/
 src-tauri/target/
+.env
