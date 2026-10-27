@@ -146,6 +146,13 @@ export function viewerHtml3D(project: TourProject, extras: Web3DExtras = {}) {
     #measure-toggle:hover,#floorplan-toggle:hover{background:#27272a}
     #measure-toggle.available,#floorplan-toggle.available{display:flex}
     #measure-toggle.on,#floorplan-toggle.on{color:#67e8f9;border-color:rgba(103,232,249,.5)}
+    #vr-toggle{display:none;height:38px;padding:0 12px;gap:6px;
+      align-items:center;border-radius:10px;border:1px solid #3f3f46;background:rgba(24,24,27,.8);color:#a1a1aa;
+      font:600 13px/1 system-ui,sans-serif;cursor:pointer;backdrop-filter:blur(4px)}
+    #vr-toggle:hover{background:#27272a}
+    #vr-toggle.available{display:flex}
+    #vr-toggle.active{color:#67e8f9;border-color:rgba(103,232,249,.5)}
+    #vr-toggle.unsupported{display:none}
 ${minimapCss}
   </style>
 </head>
@@ -156,6 +163,7 @@ ${minimapCss}
   <div id="theme-overlays"></div>
   <div id="scene-list"></div>
   <div id="tour-controls">
+    <button id="vr-toggle" type="button" aria-pressed="false"></button>
     <button id="floorplan-toggle" type="button" aria-pressed="false"></button>
     <button id="measure-toggle" type="button" aria-pressed="false"></button>
   </div>
@@ -212,6 +220,7 @@ ${minimapCss}
     });
     import { Viewer } from 'https://esm.sh/@photo-sphere-viewer/core@5';
     import { MarkersPlugin } from 'https://esm.sh/@photo-sphere-viewer/markers-plugin@5';
+    import * as THREE from 'https://esm.sh/three@0.169.0';
 
     const SCENES = ${scenesJson};
     const THEME = ${themeJson};
@@ -555,7 +564,7 @@ ${minimapJs}
           }
         });
 
-        viewer.addEventListener("ready", function() { updateMarkers(scene); syncMinimapView(); }, { once: true });
+        viewer.addEventListener("ready", function() { updateMarkers(scene); syncMinimapView(); setupVr(); }, { once: true });
         viewer.addEventListener("position-updated", syncMinimapView);
         viewer.addEventListener("zoom-updated", syncMinimapView);
       } else {
@@ -581,6 +590,110 @@ ${minimapJs}
         btn.onclick = function() { loadScene(s.id); };
         listEl.appendChild(btn);
       });
+    }
+
+    // ─── VR / WebXR (stereo rendering for headsets) ───────────────────────
+
+    var VR_TEXT = IS_IT
+      ? { label: "VR", enter: "Entra in VR", exit: "Esci da VR", unsupported: "VR non supportato su questo dispositivo" }
+      : { label: "VR", enter: "Enter VR", exit: "Exit VR", unsupported: "VR not supported on this device" };
+    var VR_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><path d="M8 12h.01"/><path d="M16 12h.01"/><path d="M12 9v6"/></svg>';
+    var vrSession = null;
+    var vrSupported = false;
+    var vrActive = false;
+
+    function updateVrToggle() {
+      var btn = document.getElementById("vr-toggle");
+      if (vrSupported) btn.classList.add("available");
+      else btn.classList.add("unsupported");
+      if (vrActive) btn.classList.add("active");
+      else btn.classList.remove("active");
+      btn.setAttribute("aria-pressed", vrActive ? "true" : "false");
+      btn.title = vrActive ? VR_TEXT.exit : VR_TEXT.enter;
+      btn.innerHTML = VR_ICON + "<span>" + VR_TEXT.label + "</span>";
+    }
+
+    async function checkVrSupport() {
+      if (typeof navigator === "undefined" || !navigator.xr) return false;
+      try {
+        return await navigator.xr.isSessionSupported("immersive-vr");
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function onVrFrame(time, frame) {
+      var session = frame.session;
+      var pose = frame.getViewerPose(session.referenceSpace);
+      if (!pose) return;
+      var renderer = viewer.renderer;
+      var threeRenderer = renderer.renderer;
+      var scene = renderer.scene;
+      var baseLayer = session.renderState.baseLayer;
+      threeRenderer.setRenderTarget(null);
+      var gl = threeRenderer.getContext();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, baseLayer.framebuffer);
+      threeRenderer.autoClear = false;
+      threeRenderer.clear();
+      for (var i = 0; i < pose.views.length; i++) {
+        var view = pose.views[i];
+        var viewport = baseLayer.getViewport(view);
+        var camera = renderer.camera.clone();
+        camera.matrix.fromArray(view.transform.matrix);
+        camera.matrixWorldNeedsUpdate = true;
+        camera.projectionMatrix.fromArray(view.projectionMatrix);
+        threeRenderer.setViewport(viewport.x, viewport.y, viewport.width, viewport.height);
+        threeRenderer.render(scene, camera);
+      }
+      session.requestAnimationFrame(onVrFrame);
+    }
+
+    async function enterVr() {
+      if (!navigator.xr) return;
+      try {
+        vrSession = await navigator.xr.requestSession("immersive-vr", {
+          optionalFeatures: ["local-floor", "bounded-floor"]
+        });
+        var gl = viewer.renderer.renderer.getContext();
+        await gl.makeXRCompatible();
+        vrSession.updateRenderState({
+          baseLayer: new XRWebGLLayer(vrSession, gl, { antialias: true })
+        });
+        vrSession.addEventListener("end", onVrSessionEnded);
+        var refSpace = await vrSession.requestReferenceSpace("local-floor");
+        vrSession.referenceSpace = refSpace;
+        vrActive = true;
+        updateVrToggle();
+        viewer.needsContinuousUpdate(true);
+        vrSession.requestAnimationFrame(onVrFrame);
+      } catch (e) {
+        alert(VR_TEXT.unsupported);
+      }
+    }
+
+    function exitVr() {
+      if (vrSession) vrSession.end();
+    }
+
+    function onVrSessionEnded() {
+      vrSession = null;
+      vrActive = false;
+      viewer.needsContinuousUpdate(false);
+      var renderer = viewer.renderer.renderer;
+      renderer.setRenderTarget(null);
+      renderer.autoClear = true;
+      viewer.needsUpdate();
+      updateVrToggle();
+    }
+
+    document.getElementById("vr-toggle").addEventListener("click", function() {
+      if (vrActive) exitVr();
+      else enterVr();
+    });
+
+    async function setupVr() {
+      vrSupported = await checkVrSupport();
+      updateVrToggle();
     }
 
     applyTheme();

@@ -351,3 +351,44 @@ test("Web 3D: without floors there is no minimap and no floor plan toggle", asyn
   const els = await runViewer(viewerHtml3D(project()));
   assert.ok(!els.get("floorplan-toggle")!.classList.contains("available"));
 });
+
+// ─── VR / WebXR ─────────────────────────────────────────────────────────────
+
+test("Web 3D: a VR toggle button is present in the tour controls", () => {
+  const html = viewerHtml3D(project());
+  assert.match(html, /<button id="vr-toggle"/);
+});
+
+test("Web 3D: the VR toggle imports Three.js and checks navigator.xr", () => {
+  const html = viewerHtml3D(project());
+  assert.match(html, /import \* as THREE from 'https:\/\/esm\.sh\/three@/);
+  const body = moduleBody(html);
+  assert.match(body, /navigator\.xr/);
+  assert.match(body, /isSessionSupported/);
+  assert.match(body, /requestSession\("immersive-vr"/);
+});
+
+test("Web 3D: the VR button starts hidden and becomes available only with headset support", async () => {
+  const els = await runViewer(viewerHtml3D(project()));
+  var btn = els.get("vr-toggle")!;
+  // Initially not "available" (setupVr is async and resolves false without navigator.xr).
+  assert.ok(!btn.classList.contains("available"));
+  assert.ok(!btn.classList.contains("active"));
+});
+
+test("Web 3D: the inline VR script is valid JavaScript that cannot be closed by theme text", () => {
+  const html = viewerHtml3D(
+    project({
+      theme: {
+        showNavbar: true,
+        showTitleOverlay: true,
+        logoUrl: "",
+        logoHeight: 32,
+        overlays: [overlay({ content: "</script><script>alert(1)</script>" })],
+      },
+    }),
+  );
+  assert.equal(html.match(/<\/script>/g)!.length, 1);
+  const body = moduleBody(html);
+  assert.doesNotThrow(() => new vm.Script(`(async () => {${body}})`));
+});

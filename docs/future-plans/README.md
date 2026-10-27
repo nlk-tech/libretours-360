@@ -10,3 +10,4 @@ Proposte di funzionalità non ancora implementate, da rivedere prima di iniziare
 | 04 | [Traduzioni dell'export Web 3D](04-i18n-export.md) | Da rivedere |
 | 05 | [Misure stimate dalla foto, calibrate su una misura nota](05-misure-stimate.md) | Da valutare: prima prova fatta, servono le regole di rilievo |
 | 06 | [Grafo delle scene sovrapposto alla planimetria](06-grafo-su-planimetria.md) | Da rivedere |
+| 07 | [Modalità VR / WebXR nell'export Web 3D](07-vr-webxr.md) | Prototipo implementato nell'export Web 3D; da testare su visore |
